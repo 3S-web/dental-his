@@ -22,7 +22,7 @@ function App() {
     return (
       <HashRouter>
         <Routes>
-          <Route path="*" element={<Login onLogin={(r) => { setRole(r); setLoggedIn(true) }} />} />
+          <Route path="*" element={<Login onLogin={() => setLoggedIn(true)} />} />
         </Routes>
       </HashRouter>
     )
