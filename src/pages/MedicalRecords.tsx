@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMedicalRecords, usePatients } from '../data/useStore'
+import AutocompleteInput from '../components/AutocompleteInput'
 import type { MedicalRecord, RecordType } from '../data/mock'
 
 const typeColors = { '初诊': 'bg-sky-100 text-sky-700', '复诊': 'bg-teal-100 text-teal-700', '急诊': 'bg-red-100 text-red-700', '手术': 'bg-purple-100 text-purple-700' }
@@ -157,37 +158,37 @@ export default function MedicalRecords() {
               </div>
               <div>
                 <label className={labelClass}>主诉 <span className="text-red-400">*</span></label>
-                <textarea rows={2} value={editingRecord.chiefComplaint} onChange={(e) => setEditingRecord({ ...editingRecord, chiefComplaint: e.target.value })} className={inputClass + ' resize-none'} placeholder="患者主要不适及持续时间..." />
+                <AutocompleteInput value={editingRecord.chiefComplaint} onChange={(v) => setEditingRecord({ ...editingRecord, chiefComplaint: v })} placeholder="患者主要不适及持续时间...（输入拼音首字母联想）" />
               </div>
               <div>
                 <label className={labelClass}>现病史</label>
-                <textarea rows={3} value={editingRecord.presentIllness || ''} onChange={(e) => setEditingRecord({ ...editingRecord, presentIllness: e.target.value })} className={inputClass + ' resize-none'} placeholder="本次发病过程、症状变化、治疗经过..." />
+                <AutocompleteInput value={editingRecord.presentIllness || ''} onChange={(v) => setEditingRecord({ ...editingRecord, presentIllness: v })} placeholder="本次发病过程...（输入拼音首字母联想）" rows={3} />
               </div>
               <div>
                 <label className={labelClass}>既往史</label>
-                <textarea rows={2} value={editingRecord.pastHistory || ''} onChange={(e) => setEditingRecord({ ...editingRecord, pastHistory: e.target.value })} className={inputClass + ' resize-none'} placeholder="既往疾病史、手术史、过敏史、用药史..." />
+                <AutocompleteInput value={editingRecord.pastHistory || ''} onChange={(v) => setEditingRecord({ ...editingRecord, pastHistory: v })} placeholder="既往疾病史、手术史...（输入拼音首字母联想）" />
               </div>
               <div>
                 <label className={labelClass}>诊断 <span className="text-red-400">*</span></label>
-                <textarea rows={2} value={editingRecord.diagnosis} onChange={(e) => setEditingRecord({ ...editingRecord, diagnosis: e.target.value })} className={inputClass + ' resize-none'} placeholder="诊断结果..." />
+                <AutocompleteInput value={editingRecord.diagnosis} onChange={(v) => setEditingRecord({ ...editingRecord, diagnosis: v })} placeholder="诊断结果...（输入拼音首字母联想）" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>治疗计划</label>
-                  <textarea rows={3} value={editingRecord.treatmentPlan} onChange={(e) => setEditingRecord({ ...editingRecord, treatmentPlan: e.target.value })} className={inputClass + ' resize-none'} placeholder="治疗计划..." />
+                  <AutocompleteInput value={editingRecord.treatmentPlan} onChange={(v) => setEditingRecord({ ...editingRecord, treatmentPlan: v })} placeholder="治疗计划...（输入拼音首字母联想）" rows={3} />
                 </div>
                 <div>
                   <label className={labelClass}>本次处置 <span className="text-red-400">*</span></label>
-                  <textarea rows={3} value={editingRecord.treatmentDone} onChange={(e) => setEditingRecord({ ...editingRecord, treatmentDone: e.target.value })} className={inputClass + ' resize-none'} placeholder="本次做了哪些治疗..." />
+                  <AutocompleteInput value={editingRecord.treatmentDone} onChange={(v) => setEditingRecord({ ...editingRecord, treatmentDone: v })} placeholder="本次做了哪些治疗...（输入拼音首字母联想）" rows={3} />
                 </div>
               </div>
               <div>
                 <label className={labelClass}>处方用药</label>
-                <textarea rows={2} value={editingRecord.prescription || ''} onChange={(e) => setEditingRecord({ ...editingRecord, prescription: e.target.value })} className={inputClass + ' resize-none'} placeholder="开具的处方药物..." />
+                <AutocompleteInput value={editingRecord.prescription || ''} onChange={(v) => setEditingRecord({ ...editingRecord, prescription: v })} placeholder="开具的处方药物...（输入拼音首字母联想）" />
               </div>
               <div>
                 <label className={labelClass}>医嘱备注</label>
-                <textarea rows={2} value={editingRecord.notes || ''} onChange={(e) => setEditingRecord({ ...editingRecord, notes: e.target.value })} className={inputClass + ' resize-none'} placeholder="医嘱、注意事项..." />
+                <AutocompleteInput value={editingRecord.notes || ''} onChange={(v) => setEditingRecord({ ...editingRecord, notes: v })} placeholder="医嘱、注意事项...（输入拼音首字母联想）" />
               </div>
               <div className="flex gap-3 justify-end pt-2">
                 <button type="button" onClick={() => setEditingRecord(null)} className="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200">取消</button>
@@ -225,37 +226,37 @@ export default function MedicalRecords() {
               </div>
               <div>
                 <label className={labelClass}>主诉 <span className="text-red-400">*</span></label>
-                <textarea rows={2} value={form.chiefComplaint} onChange={(e) => setForm({ ...form, chiefComplaint: e.target.value })} className={inputClass + ' resize-none'} placeholder="患者主要不适及持续时间..." />
+                <AutocompleteInput value={form.chiefComplaint} onChange={(v) => setForm({ ...form, chiefComplaint: v })} placeholder="患者主要不适及持续时间...（输入拼音首字母联想）" />
               </div>
               <div>
                 <label className={labelClass}>现病史</label>
-                <textarea rows={3} value={form.presentIllness} onChange={(e) => setForm({ ...form, presentIllness: e.target.value })} className={inputClass + ' resize-none'} placeholder="本次发病过程、症状变化、就诊治疗经过..." />
+                <AutocompleteInput value={form.presentIllness} onChange={(v) => setForm({ ...form, presentIllness: v })} placeholder="本次发病过程...（输入拼音首字母联想）" rows={3} />
               </div>
               <div>
                 <label className={labelClass}>既往史</label>
-                <textarea rows={2} value={form.pastHistory} onChange={(e) => setForm({ ...form, pastHistory: e.target.value })} className={inputClass + ' resize-none'} placeholder="既往疾病史、手术史、过敏史、用药史..." />
+                <AutocompleteInput value={form.pastHistory} onChange={(v) => setForm({ ...form, pastHistory: v })} placeholder="既往疾病史、手术史、过敏史...（输入拼音首字母联想）" />
               </div>
               <div>
                 <label className={labelClass}>诊断 <span className="text-red-400">*</span></label>
-                <textarea rows={2} value={form.diagnosis} onChange={(e) => setForm({ ...form, diagnosis: e.target.value })} className={inputClass + ' resize-none'} placeholder="诊断结果..." />
+                <AutocompleteInput value={form.diagnosis} onChange={(v) => setForm({ ...form, diagnosis: v })} placeholder="诊断结果...（输入拼音首字母联想）" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelClass}>治疗计划</label>
-                  <textarea rows={3} value={form.treatmentPlan} onChange={(e) => setForm({ ...form, treatmentPlan: e.target.value })} className={inputClass + ' resize-none'} placeholder="治疗计划..." />
+                  <AutocompleteInput value={form.treatmentPlan} onChange={(v) => setForm({ ...form, treatmentPlan: v })} placeholder="治疗计划...（输入拼音首字母联想）" rows={3} />
                 </div>
                 <div>
                   <label className={labelClass}>本次处置 <span className="text-red-400">*</span></label>
-                  <textarea rows={3} value={form.treatmentDone} onChange={(e) => setForm({ ...form, treatmentDone: e.target.value })} className={inputClass + ' resize-none'} placeholder="本次治疗内容..." />
+                  <AutocompleteInput value={form.treatmentDone} onChange={(v) => setForm({ ...form, treatmentDone: v })} placeholder="本次治疗内容...（输入拼音首字母联想）" rows={3} />
                 </div>
               </div>
               <div>
                 <label className={labelClass}>处方用药</label>
-                <textarea rows={2} value={form.prescription} onChange={(e) => setForm({ ...form, prescription: e.target.value })} className={inputClass + ' resize-none'} placeholder="开具的处方药物..." />
+                <AutocompleteInput value={form.prescription} onChange={(v) => setForm({ ...form, prescription: v })} placeholder="开具的处方药物...（输入拼音首字母联想）" />
               </div>
               <div>
                 <label className={labelClass}>医嘱备注</label>
-                <textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputClass + ' resize-none'} placeholder="医嘱、注意事项..." />
+                <AutocompleteInput value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} placeholder="医嘱、注意事项...（输入拼音首字母联想）" />
               </div>
               <div className="flex gap-3 justify-end pt-2">
                 <button type="button" onClick={() => setShowNewForm(false)} className="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200">取消</button>
