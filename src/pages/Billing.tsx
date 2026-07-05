@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { billings, serviceCatalog } from '../data/mock'
+import { useBillings } from '../data/useStore'
+import { serviceCatalog } from '../data/mock'
 
 export default function Billing() {
   const [search, setSearch] = useState('')
   const [paidFilter, setPaidFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
   const [showNewBill, setShowNewBill] = useState(false)
-  const [bills, setBills] = useState(billings)
+  const { billings: bills, updateBilling } = useBillings()
 
   const filtered = bills.filter((b) => {
     if (paidFilter === 'paid' && !b.paid) return false
@@ -14,7 +15,7 @@ export default function Billing() {
     return true
   })
 
-  const markPaid = (id: string) => setBills((prev) => prev.map((b) => b.id === id ? { ...b, paid: true, method: '微信' as const } : b))
+  const markPaid = (id: string) => updateBilling(id, { paid: true, method: '微信' })
 
   const totalRevenue = bills.filter(b => b.paid).reduce((s, b) => s + b.total, 0)
   const totalUnpaid = bills.filter(b => !b.paid).reduce((s, b) => s + b.total, 0)

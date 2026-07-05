@@ -1,11 +1,15 @@
 import { Link } from 'react-router-dom'
-import { appointments, patients, billings, drugs, reportData } from '../data/mock'
+import { useAppointments, usePatients, useBillings } from '../data/useStore'
+import { drugs, reportData } from '../data/mock'
 import type { Role } from '../data/mock'
 
 interface DashboardProps { role: Role }
 
 export default function Dashboard(_props: DashboardProps) {
-  const today = '2026-07-02'
+  const { appointments } = useAppointments()
+  const { patients } = usePatients()
+  const { billings } = useBillings()
+  const today = new Date().toISOString().split('T')[0]
   const todayApps = appointments.filter((a) => a.date === today)
   const waiting = todayApps.filter((a) => a.status === 'waiting').length
   const inProgress = todayApps.filter((a) => a.status === 'in_progress').length

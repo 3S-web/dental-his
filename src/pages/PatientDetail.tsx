@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { patients, medicalRecords, imagings, billings } from '../data/mock'
+import { usePatients, useMedicalRecords, useBillings } from '../data/useStore'
+import { imagings } from '../data/mock'
 import ToothChart from '../components/ToothChart'
 import type { ToothRecord } from '../data/mock'
 
 export default function PatientDetail() {
   const { id } = useParams<{ id: string }>()
+  const { patients } = usePatients()
+  const { records: medicalRecords } = useMedicalRecords()
+  const { billings } = useBillings()
   const patient = patients.find((p) => p.id === id)
   const [activeTab, setActiveTab] = useState<'records' | 'teeth' | 'imaging' | 'billing'>('records')
 

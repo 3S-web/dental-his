@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { medicalRecords } from '../data/mock'
+import { useMedicalRecords } from '../data/useStore'
 
 const typeColors = { '初诊': 'bg-sky-100 text-sky-700', '复诊': 'bg-teal-100 text-teal-700', '急诊': 'bg-red-100 text-red-700', '手术': 'bg-purple-100 text-purple-700' }
 
@@ -8,6 +8,8 @@ export default function MedicalRecords() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [selectedRecord, setSelectedRecord] = useState<typeof medicalRecords[0] | null>(null)
   const [showNewForm, setShowNewForm] = useState(false)
+
+  const { records: medicalRecords } = useMedicalRecords()
 
   const filtered = medicalRecords.filter((r) => {
     if (typeFilter !== 'all' && r.type !== typeFilter) return false
