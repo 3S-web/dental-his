@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMedicalRecords, usePatients } from '../data/useStore'
 import AutocompleteInput from '../components/AutocompleteInput'
+import AIDictationDrawer from '../components/AIDictationDrawer'
 import type { MedicalRecord, RecordType } from '../data/mock'
 
 const typeColors = { '初诊': 'bg-sky-100 text-sky-700', '复诊': 'bg-teal-100 text-teal-700', '急诊': 'bg-red-100 text-red-700', '手术': 'bg-purple-100 text-purple-700' }
@@ -20,6 +21,7 @@ export default function MedicalRecords() {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null)
   const [editingRecord, setEditingRecord] = useState<MedicalRecord | null>(null)
   const [showNewForm, setShowNewForm] = useState(false)
+  const [showAIDrawer, setShowAIDrawer] = useState(false)
   const [form, setForm] = useState(emptyForm)
 
   const filtered = records.filter((r) => {
@@ -29,6 +31,19 @@ export default function MedicalRecords() {
   })
 
   const resetForm = () => setForm(emptyForm)
+
+  // Save AI-generated record
+  const handleAISave = (gen: { chiefComplaint: string; presentIllness: string; pastHistory: string; diagnosis: string; treatmentPlan: string; treatmentDone: string; prescription: string; notes: string }) => {
+    addRecord({
+      patientName: 'AI口述患者',
+      patientId: '',
+      type: '复诊',
+      doctorName: '陈志明',
+      date: new Date().toISOString().split('T')[0],
+      ...gen,
+      teeth: [],
+    })
+  }
 
   const handleSaveNew = () => {
     if (!form.patientName || !form.diagnosis || !form.treatmentDone) return
@@ -58,9 +73,14 @@ export default function MedicalRecords() {
           <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索患者、诊断..." className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 transition-all placeholder:text-gray-400" />
         </div>
-        <button onClick={() => { resetForm(); setShowNewForm(true) }} type="button" className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-teal-200/30 hover:shadow-lg active:scale-95 transition-all">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>新建病历
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowAIDrawer(true)} type="button" className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-green-200/30 hover:shadow-lg hover:from-green-600 hover:to-emerald-600 active:scale-95 transition-all">
+            <span className="text-base">🎤</span> AI口述病例
+          </button>
+          <button onClick={() => { resetForm(); setShowNewForm(true) }} type="button" className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-teal-200/30 hover:shadow-lg active:scale-95 transition-all">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>新建病历
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto">
@@ -266,6 +286,13 @@ export default function MedicalRecords() {
           </div>
         </div>
       )}
+      {/* AI Dictation Drawer */}
+      <AIDictationDrawer
+        isOpen={showAIDrawer}
+        onClose={() => setShowAIDrawer(false)}
+        onSave={handleAISave}
+        patientNames={patients.map((p) => p.name)}
+      />
     </div>
   )
 }
