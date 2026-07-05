@@ -5,7 +5,6 @@ import type { Role } from '../data/mock'
 
 interface LayoutProps {
   role: Role
-  onRoleChange: (role: Role) => void
   currentUser: CurrentUser
 }
 
@@ -43,7 +42,7 @@ const navGroups = {
 
 const roleLabels: Record<Role, string> = { doctor: '医生端', nurse: '护士端', reception: '前台端', admin: '管理端' }
 
-export default function Layout({ role, onRoleChange, currentUser }: LayoutProps) {
+export default function Layout({ role, currentUser }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const navItems = navGroups[role] || navGroups.doctor
@@ -76,25 +75,12 @@ export default function Layout({ role, onRoleChange, currentUser }: LayoutProps)
           ))}
         </nav>
 
-        {/* Role switcher */}
-        <div className="absolute bottom-16 left-0 right-0 px-3">
-          <p className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">切换角色</p>
-          <div className="grid grid-cols-2 gap-1">
-            {(Object.keys(roleLabels) as Role[]).map((r) => (
-              <button key={r} type="button" onClick={() => onRoleChange(r)}
-                className={`text-[11px] px-2.5 py-1.5 rounded-lg font-medium transition-all ${role === r ? 'bg-teal-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
-                {roleLabels[r]}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-50 bg-gray-50/50">
           <div className="flex items-center gap-2.5 px-2" onClick={() => navigate('/login')} style={{ cursor: 'pointer' }}>
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white font-bold text-xs shrink-0">{currentUser.name[0]}</div>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-gray-800 truncate">{currentUser.name}</p>
-              <p className="text-[10px] text-gray-400 truncate">工号 {currentUser.workId}</p>
+              <p className="text-[10px] text-gray-400 truncate">{roleLabels[role]} · 工号 {currentUser.workId}</p>
             </div>
           </div>
         </div>

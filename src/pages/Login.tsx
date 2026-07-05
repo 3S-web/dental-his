@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import type { CurrentUser } from '../App'
+import type { Role } from '../data/mock'
 
 interface LoginProps { onLogin: (user: CurrentUser) => void }
 
@@ -14,13 +15,14 @@ export default function Login({ onLogin }: LoginProps) {
   // Register form
   const [regName, setRegName] = useState('')
   const [regWorkId, setRegWorkId] = useState('')
+  const [regRole, setRegRole] = useState<Role>('doctor')
   const [regAccount, setRegAccount] = useState('')
   const [regPwd, setRegPwd] = useState('')
   const [regPwdConfirm, setRegPwdConfirm] = useState('')
   const [registered, setRegistered] = useState(false)
 
   // Store registered users in localStorage for mock persistence
-  const getRegisteredUsers = (): Record<string, { name: string; workId: string; account: string; password: string }> => {
+  const getRegisteredUsers = (): Record<string, { name: string; workId: string; role: Role; account: string; password: string }> => {
     try { return JSON.parse(localStorage.getItem('his_users') || '{}') } catch { return {} }
   }
 
@@ -33,7 +35,7 @@ export default function Login({ onLogin }: LoginProps) {
       const registeredUsers = getRegisteredUsers()
       const found = registeredUsers[loginAccount]
       if (found && found.password === loginPwd) {
-        onLogin({ name: found.name, workId: found.workId, account: found.account })
+        onLogin({ name: found.name, workId: found.workId, account: found.account, role: found.role })
       } else {
         alert('账号或密码错误')
       }
@@ -54,6 +56,7 @@ export default function Login({ onLogin }: LoginProps) {
       registeredUsers[regAccount] = {
         name: regName,
         workId: regWorkId,
+        role: regRole,
         account: regAccount,
         password: regPwd,
       }
@@ -64,6 +67,7 @@ export default function Login({ onLogin }: LoginProps) {
       setRegAccount('')
       setRegPwd('')
       setRegPwdConfirm('')
+      setRegRole('doctor')
       setTimeout(() => { setRegistered(false); setTab('login') }, 2000)
     }, 800)
   }
@@ -197,6 +201,16 @@ export default function Login({ onLogin }: LoginProps) {
                         <label htmlFor="regWorkId" className="block text-xs font-semibold text-gray-700 mb-1">工号</label>
                         <input id="regWorkId" type="text" value={regWorkId} onChange={(e) => setRegWorkId(e.target.value)} placeholder="请输入工号" className={inputClass} />
                       </div>
+                    </div>
+                    <div>
+                      <label htmlFor="regRole" className="block text-xs font-semibold text-gray-700 mb-1">注册角色</label>
+                      <select id="regRole" value={regRole} onChange={(e) => setRegRole(e.target.value as Role)}
+                        className={inputClass}>
+                        <option value="doctor">医生</option>
+                        <option value="nurse">护士</option>
+                        <option value="reception">前台</option>
+                        <option value="admin">管理员</option>
+                      </select>
                     </div>
                     <div>
                       <label htmlFor="regAccount" className="block text-xs font-semibold text-gray-700 mb-1">登录账号</label>

@@ -18,18 +18,19 @@ export interface CurrentUser {
   name: string
   workId: string
   account: string
+  role: Role
 }
 
 function App() {
   const [role, setRole] = useState<Role>('doctor')
-  const [currentUser, setCurrentUser] = useState<CurrentUser>({ name: '陈志明', workId: 'U001', account: 'doctor1' })
+  const [currentUser, setCurrentUser] = useState<CurrentUser>({ name: '陈志明', workId: 'U001', account: 'doctor1', role: 'doctor' })
   const [loggedIn, setLoggedIn] = useState(false)
 
   if (!loggedIn) {
     return (
       <HashRouter>
         <Routes>
-          <Route path="*" element={<Login onLogin={(user) => { setCurrentUser(user); setLoggedIn(true) }} />} />
+          <Route path="*" element={<Login onLogin={(user) => { setCurrentUser(user); setRole(user.role); setLoggedIn(true) }} />} />
         </Routes>
       </HashRouter>
     )
@@ -38,7 +39,7 @@ function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route element={<Layout role={role} onRoleChange={setRole} currentUser={currentUser} />}>
+        <Route element={<Layout role={role} currentUser={currentUser} />}>
           <Route path="/dashboard" element={<Dashboard role={role} />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/patients" element={<Patients />} />
