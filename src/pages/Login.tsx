@@ -1,13 +1,14 @@
 import { useState, type FormEvent } from 'react'
+import type { CurrentUser } from '../App'
 
-interface LoginProps { onLogin: () => void }
+interface LoginProps { onLogin: (user: CurrentUser) => void }
 
 export default function Login({ onLogin }: LoginProps) {
   const [tab, setTab] = useState<'login' | 'register'>('login')
   const [loading, setLoading] = useState(false)
 
   // Login form
-  const [loginId, setLoginId] = useState('')
+  const [loginAccount, setLoginAccount] = useState('')
   const [loginPwd, setLoginPwd] = useState('')
 
   // Register form
@@ -18,11 +19,25 @@ export default function Login({ onLogin }: LoginProps) {
   const [regPwdConfirm, setRegPwdConfirm] = useState('')
   const [registered, setRegistered] = useState(false)
 
+  // Store registered users in localStorage for mock persistence
+  const getRegisteredUsers = (): Record<string, { name: string; workId: string; account: string; password: string }> => {
+    try { return JSON.parse(localStorage.getItem('his_users') || '{}') } catch { return {} }
+  }
+
   const handleLogin = (e: FormEvent) => {
     e.preventDefault()
-    if (!loginId || !loginPwd) return
+    if (!loginAccount || !loginPwd) return
     setLoading(true)
-    setTimeout(() => { setLoading(false); onLogin() }, 600)
+    setTimeout(() => {
+      setLoading(false)
+      const registeredUsers = getRegisteredUsers()
+      const found = registeredUsers[loginAccount]
+      if (found && found.password === loginPwd) {
+        onLogin({ name: found.name, workId: found.workId, account: found.account })
+      } else {
+        alert('账号或密码错误')
+      }
+    }, 600)
   }
 
   const handleRegister = (e: FormEvent) => {
@@ -31,6 +46,18 @@ export default function Login({ onLogin }: LoginProps) {
     setLoading(true)
     setTimeout(() => {
       setLoading(false)
+      const registeredUsers = getRegisteredUsers()
+      if (registeredUsers[regAccount]) {
+        alert('该账号已存在，请更换')
+        return
+      }
+      registeredUsers[regAccount] = {
+        name: regName,
+        workId: regWorkId,
+        account: regAccount,
+        password: regPwd,
+      }
+      localStorage.setItem('his_users', JSON.stringify(registeredUsers))
       setRegistered(true)
       setRegName('')
       setRegWorkId('')
@@ -107,12 +134,12 @@ export default function Login({ onLogin }: LoginProps) {
 
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
-                    <label htmlFor="loginId" className="block text-sm font-semibold text-gray-700 mb-1.5">工号 / 账号</label>
+                    <label htmlFor="loginAccount" className="block text-sm font-semibold text-gray-700 mb-1.5">账号</label>
                     <div className="relative">
                       <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
-                      <input id="loginId" type="text" value={loginId} onChange={(e) => setLoginId(e.target.value)} placeholder="请输入工号或账号" className={`${inputClass} pl-10`} />
+                      <input id="loginAccount" type="text" value={loginAccount} onChange={(e) => setLoginAccount(e.target.value)} placeholder="请输入登录账号" className={`${inputClass} pl-10`} />
                     </div>
                   </div>
                   <div>
@@ -133,8 +160,8 @@ export default function Login({ onLogin }: LoginProps) {
                     <a href="#" className="text-teal-600 hover:text-teal-700 font-medium">忘记密码？</a>
                   </div>
 
-                  <button type="submit" disabled={!loginId || !loginPwd || loading}
-                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${loginId && loginPwd && !loading ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white shadow-lg shadow-teal-200/30 hover:shadow-xl hover:from-teal-600 hover:to-teal-700 active:scale-[0.98]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+                  <button type="submit" disabled={!loginAccount || !loginPwd || loading}
+                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${loginAccount && loginPwd && !loading ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white shadow-lg shadow-teal-200/30 hover:shadow-xl hover:from-teal-600 hover:to-teal-700 active:scale-[0.98]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
                     {loading ? (
                       <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>登录中...</>
                     ) : '登录'}

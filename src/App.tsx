@@ -14,15 +14,22 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import type { Role } from './data/mock'
 
+export interface CurrentUser {
+  name: string
+  workId: string
+  account: string
+}
+
 function App() {
   const [role, setRole] = useState<Role>('doctor')
+  const [currentUser, setCurrentUser] = useState<CurrentUser>({ name: '陈志明', workId: 'U001', account: 'doctor1' })
   const [loggedIn, setLoggedIn] = useState(false)
 
   if (!loggedIn) {
     return (
       <HashRouter>
         <Routes>
-          <Route path="*" element={<Login onLogin={() => setLoggedIn(true)} />} />
+          <Route path="*" element={<Login onLogin={(user) => { setCurrentUser(user); setLoggedIn(true) }} />} />
         </Routes>
       </HashRouter>
     )
@@ -31,7 +38,7 @@ function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route element={<Layout role={role} onRoleChange={setRole} />}>
+        <Route element={<Layout role={role} onRoleChange={setRole} currentUser={currentUser} />}>
           <Route path="/dashboard" element={<Dashboard role={role} />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/patients" element={<Patients />} />

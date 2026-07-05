@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { users } from '../data/mock'
+import type { CurrentUser } from '../App'
 import type { Role } from '../data/mock'
 
 interface LayoutProps {
   role: Role
   onRoleChange: (role: Role) => void
+  currentUser: CurrentUser
 }
 
 const navGroups = {
@@ -42,10 +43,9 @@ const navGroups = {
 
 const roleLabels: Record<Role, string> = { doctor: '医生端', nurse: '护士端', reception: '前台端', admin: '管理端' }
 
-export default function Layout({ role, onRoleChange }: LayoutProps) {
+export default function Layout({ role, onRoleChange, currentUser }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
-  const currentUser = users.find((u) => u.role === role) || users[0]
   const navItems = navGroups[role] || navGroups.doctor
 
   return (
@@ -91,10 +91,10 @@ export default function Layout({ role, onRoleChange }: LayoutProps) {
 
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-50 bg-gray-50/50">
           <div className="flex items-center gap-2.5 px-2" onClick={() => navigate('/login')} style={{ cursor: 'pointer' }}>
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white font-bold text-xs shrink-0">{currentUser.avatar}</div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white font-bold text-xs shrink-0">{currentUser.name[0]}</div>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-gray-800 truncate">{currentUser.name}</p>
-              <p className="text-[10px] text-gray-400 truncate">{currentUser.title}</p>
+              <p className="text-[10px] text-gray-400 truncate">工号 {currentUser.workId}</p>
             </div>
           </div>
         </div>
