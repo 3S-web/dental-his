@@ -4,10 +4,12 @@ interface GeneratedRecord {
   chiefComplaint: string
   presentIllness: string
   pastHistory: string
+  oralExam: string
+  auxExam: string
   diagnosis: string
   treatmentPlan: string
-  treatmentDone: string
-  prescription: string
+  treatment: string
+  orders: string
   notes: string
 }
 
@@ -23,11 +25,13 @@ const mockRecord: GeneratedRecord = {
   chiefComplaint: '种植牙术后复诊',
   presentIllness: '患者3个月前于我院完成#16种植体植入，恢复良好，无明显疼痛及肿胀。术后遵医嘱执行口腔卫生维护。',
   pastHistory: '否认高血压、糖尿病等系统性疾病史，否认药物过敏史，否认手术外伤史。',
+  oralExam: '#16种植体周围牙龈色泽正常，探诊无出血，角化龈宽度充足。全口口腔卫生状况良好，未见明显龋坏，牙石（-），软垢（-）。',
+  auxExam: 'CBCT示#16种植体周围骨密度正常，骨结合良好，未见透射影。',
   diagnosis: '种植体愈合正常，骨结合稳定，牙龈色泽正常，探诊无出血。',
   treatmentPlan: '继续观察，3个月后行上部修复。建议继续保持口腔卫生，定期复查。',
-  treatmentDone: '完成术后3个月常规复查，CBCT提示种植体周围骨密度正常，骨结合良好。',
-  prescription: '无',
-  notes: '保持口腔卫生，每日刷牙2次，使用软毛牙刷及牙线。按时复诊，不适随诊。',
+  treatment: '完成术后3个月常规复查，口腔卫生指导。',
+  orders: '保持口腔卫生，每日刷牙2次，使用软毛牙刷及牙线。按时复诊，不适随诊。',
+  notes: '患者配合度高，口腔卫生维护良好。',
 }
 
 type Phase = 'idle' | 'recording' | 'processing' | 'result'
@@ -292,11 +296,13 @@ export default function AIDictationDrawer({ isOpen, onClose, onSave, patientName
                 { label: '主诉', field: 'chiefComplaint' as const, rows: 2 },
                 { label: '现病史', field: 'presentIllness' as const, rows: 3 },
                 { label: '既往史', field: 'pastHistory' as const, rows: 2 },
+                { label: '口腔检查', field: 'oralExam' as const, rows: 3 },
+                { label: '辅助检查', field: 'auxExam' as const, rows: 2 },
                 { label: '诊断', field: 'diagnosis' as const, rows: 2 },
                 { label: '治疗计划', field: 'treatmentPlan' as const, rows: 2 },
-                { label: '本次处置', field: 'treatmentDone' as const, rows: 3 },
-                { label: '处方用药', field: 'prescription' as const, rows: 2 },
-                { label: '医嘱备注', field: 'notes' as const, rows: 2 },
+                { label: '处置', field: 'treatment' as const, rows: 3 },
+                { label: '医嘱', field: 'orders' as const, rows: 2 },
+                { label: '备注', field: 'notes' as const, rows: 2 },
               ].map(({ label, field, rows }) => (
                 <div key={field}>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">{label}</label>

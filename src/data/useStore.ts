@@ -12,7 +12,17 @@ const defaultAppointments: Appointment[] = [
 
 const defaultRecords: MedicalRecord[] = [
   { id: 'R001', patientId: 'P001', patientName: '王晓明', date: '2026-07-02', doctorName: '陈志明', type: '复诊',
-    chiefComplaint: '种植牙术后感觉良好', presentIllness: '3个月前于我院行#16种植体植入术，术后恢复顺利，无明显疼痛及肿胀', pastHistory: '否认高血压、糖尿病等系统性疾病史，否认药物过敏史', diagnosis: '种植体愈合正常', treatmentPlan: '继续观察，3个月后行上部修复', treatmentDone: '完成术后复查，CBCT示骨结合良好', teeth: [] },
+    chiefComplaint: '种植牙术后感觉良好',
+    presentIllness: '3个月前于我院行#16种植体植入术，术后恢复顺利，无明显疼痛及肿胀',
+    pastHistory: '否认高血压、糖尿病等系统性疾病史，否认药物过敏史',
+    oralExam: '#16种植体周围牙龈色泽正常，探诊无出血，角化龈宽度充足。全口口腔卫生状况良好，未见明显龋坏。',
+    auxExam: 'CBCT示#16种植体周围骨密度正常，骨结合良好，未见透射影。',
+    diagnosis: '种植体愈合正常，骨结合稳定',
+    treatmentPlan: '继续观察，3个月后行上部修复。建议继续保持良好口腔卫生，定期复查。',
+    treatment: '完成术后3个月常规复查，口腔卫生指导',
+    orders: '保持口腔卫生，每日刷牙2次，使用软毛牙刷及牙线。按时复诊，不适随诊。',
+    notes: '患者配合度高，口腔卫生维护优秀',
+    teeth: [] },
 ]
 
 const defaultBillings: BillingItem[] = [

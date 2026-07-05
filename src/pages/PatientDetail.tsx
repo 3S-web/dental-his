@@ -77,12 +77,14 @@ export default function PatientDetail() {
             <div key={r.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3"><span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${r.type === '初诊' ? 'bg-sky-100 text-sky-700' : r.type === '手术' ? 'bg-red-100 text-red-700' : 'bg-teal-100 text-teal-700'}`}>{r.type}</span><span className="text-xs text-gray-400">{r.date} · {r.doctorName}</span></div>
               <div className="grid sm:grid-cols-2 gap-3">
-                <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">主诉</p><p className="text-sm text-gray-800">{r.chiefComplaint}</p></div>
-                <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">诊断</p><p className="text-sm text-gray-800">{r.diagnosis}</p></div>
-                <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">治疗计划</p><p className="text-sm text-gray-800">{r.treatmentPlan}</p></div>
-                <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">本次处置</p><p className="text-sm text-gray-800">{r.treatmentDone}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">主诉</p><p className="text-sm text-gray-800 line-clamp-2">{r.chiefComplaint}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">诊断</p><p className="text-sm text-gray-800 line-clamp-2">{r.diagnosis}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">口腔检查</p><p className="text-sm text-gray-800 line-clamp-2">{r.oralExam || '无'}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">辅助检查</p><p className="text-sm text-gray-800 line-clamp-2">{r.auxExam || '无'}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">治疗计划</p><p className="text-sm text-gray-800 line-clamp-2">{r.treatmentPlan}</p></div>
+                <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">处置</p><p className="text-sm text-gray-800 line-clamp-2">{r.treatment}</p></div>
               </div>
-              {r.prescription && <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-100"><p className="text-[11px] text-amber-600 font-medium mb-1">💊 处方</p><p className="text-sm text-gray-700 whitespace-pre-line">{r.prescription}</p></div>}
+              {r.orders && r.orders !== '无' && <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-100"><p className="text-[11px] text-amber-600 font-medium mb-1">💊 医嘱</p><p className="text-sm text-gray-700 whitespace-pre-line">{r.orders}</p></div>}
               {r.fee && <div className="mt-3 text-right text-sm"><span className="text-gray-400">费用：</span><span className="font-bold text-gray-800">¥{r.fee.toLocaleString()}</span></div>}
             </div>
           ))}

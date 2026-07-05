@@ -9,8 +9,9 @@ const typeColors = { '初诊': 'bg-sky-100 text-sky-700', '复诊': 'bg-teal-100
 const emptyForm = {
   patientName: '', patientId: '', type: '复诊' as RecordType,
   chiefComplaint: '', presentIllness: '', pastHistory: '',
-  diagnosis: '', treatmentPlan: '', treatmentDone: '',
-  prescription: '', notes: '',
+  oralExam: '', auxExam: '',
+  diagnosis: '', treatmentPlan: '', treatment: '',
+  orders: '', notes: '',
 }
 
 export default function MedicalRecords() {
@@ -26,14 +27,14 @@ export default function MedicalRecords() {
 
   const filtered = records.filter((r) => {
     if (typeFilter !== 'all' && r.type !== typeFilter) return false
-    if (search && !r.patientName.includes(search) && !r.diagnosis.includes(search) && !r.treatmentDone.includes(search)) return false
+    if (search && !r.patientName.includes(search) && !r.diagnosis.includes(search) && !r.treatment.includes(search)) return false
     return true
   })
 
   const resetForm = () => setForm(emptyForm)
 
   // Save AI-generated record
-  const handleAISave = (gen: { chiefComplaint: string; presentIllness: string; pastHistory: string; diagnosis: string; treatmentPlan: string; treatmentDone: string; prescription: string; notes: string }) => {
+  const handleAISave = (gen: { chiefComplaint: string; presentIllness: string; pastHistory: string; oralExam: string; auxExam: string; diagnosis: string; treatmentPlan: string; treatment: string; orders: string; notes: string }) => {
     addRecord({
       patientName: 'AI口述患者',
       patientId: '',
@@ -46,7 +47,7 @@ export default function MedicalRecords() {
   }
 
   const handleSaveNew = () => {
-    if (!form.patientName || !form.diagnosis || !form.treatmentDone) return
+    if (!form.patientName || !form.diagnosis || !form.treatment) return
     addRecord({
       ...form,
       doctorName: '陈志明', date: new Date().toISOString().split('T')[0],
@@ -104,7 +105,7 @@ export default function MedicalRecords() {
             <div className="grid sm:grid-cols-3 gap-3">
               <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">主诉</p><p className="text-sm text-gray-800 line-clamp-2">{r.chiefComplaint}</p></div>
               <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">诊断</p><p className="text-sm text-gray-800 line-clamp-2">{r.diagnosis}</p></div>
-              <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">处置</p><p className="text-sm text-gray-800 line-clamp-2">{r.treatmentDone}</p></div>
+              <div className="bg-gray-50 rounded-lg p-3"><p className="text-[11px] text-gray-400 font-medium mb-1">处置</p><p className="text-sm text-gray-800 line-clamp-2">{r.treatment}</p></div>
             </div>
             <div className="mt-3 flex items-center gap-2 text-xs text-teal-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
               点击查看详情/编辑 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
@@ -134,11 +135,13 @@ export default function MedicalRecords() {
                 { label: '主诉', value: selectedRecord.chiefComplaint },
                 { label: '现病史', value: selectedRecord.presentIllness || '无' },
                 { label: '既往史', value: selectedRecord.pastHistory || '无' },
+                { label: '口腔检查', value: selectedRecord.oralExam || '无' },
+                { label: '辅助检查', value: selectedRecord.auxExam || '无' },
                 { label: '诊断', value: selectedRecord.diagnosis },
                 { label: '治疗计划', value: selectedRecord.treatmentPlan },
-                { label: '本次处置', value: selectedRecord.treatmentDone },
-                { label: '处方用药', value: selectedRecord.prescription || '无' },
-                { label: '医嘱备注', value: selectedRecord.notes || '无' },
+                { label: '处置', value: selectedRecord.treatment },
+                { label: '医嘱', value: selectedRecord.orders || '无' },
+                { label: '备注', value: selectedRecord.notes || '无' },
               ].map((f) => (
                 <div key={f.label} className="bg-gray-50 rounded-xl p-4">
                   <p className="text-[11px] text-gray-400 font-semibold mb-1 uppercase tracking-wider">{f.label}</p>
@@ -189,6 +192,14 @@ export default function MedicalRecords() {
                 <AutocompleteInput value={editingRecord.pastHistory || ''} onChange={(v) => setEditingRecord({ ...editingRecord, pastHistory: v })} placeholder="既往疾病史、手术史...（输入拼音首字母联想）" />
               </div>
               <div>
+                <label className={labelClass}>口腔检查</label>
+                <AutocompleteInput value={editingRecord.oralExam || ''} onChange={(v) => setEditingRecord({ ...editingRecord, oralExam: v })} placeholder="口内检查所见...（输入拼音首字母联想）" rows={3} />
+              </div>
+              <div>
+                <label className={labelClass}>辅助检查</label>
+                <AutocompleteInput value={editingRecord.auxExam || ''} onChange={(v) => setEditingRecord({ ...editingRecord, auxExam: v })} placeholder="CBCT/全景片/化验等...（输入拼音首字母联想）" rows={2} />
+              </div>
+              <div>
                 <label className={labelClass}>诊断 <span className="text-red-400">*</span></label>
                 <AutocompleteInput value={editingRecord.diagnosis} onChange={(v) => setEditingRecord({ ...editingRecord, diagnosis: v })} placeholder="诊断结果...（输入拼音首字母联想）" />
               </div>
@@ -199,16 +210,16 @@ export default function MedicalRecords() {
                 </div>
                 <div>
                   <label className={labelClass}>本次处置 <span className="text-red-400">*</span></label>
-                  <AutocompleteInput value={editingRecord.treatmentDone} onChange={(v) => setEditingRecord({ ...editingRecord, treatmentDone: v })} placeholder="本次做了哪些治疗...（输入拼音首字母联想）" rows={3} />
+                  <AutocompleteInput value={editingRecord.treatment} onChange={(v) => setEditingRecord({ ...editingRecord, treatment: v })} placeholder="处置...（输入拼音首字母联想）" rows={3} />
                 </div>
               </div>
               <div>
-                <label className={labelClass}>处方用药</label>
-                <AutocompleteInput value={editingRecord.prescription || ''} onChange={(v) => setEditingRecord({ ...editingRecord, prescription: v })} placeholder="开具的处方药物...（输入拼音首字母联想）" />
+                <label className={labelClass}>医嘱</label>
+                <AutocompleteInput value={editingRecord.orders || ''} onChange={(v) => setEditingRecord({ ...editingRecord, orders: v })} placeholder="医嘱...（输入拼音首字母联想）" />
               </div>
               <div>
-                <label className={labelClass}>医嘱备注</label>
-                <AutocompleteInput value={editingRecord.notes || ''} onChange={(v) => setEditingRecord({ ...editingRecord, notes: v })} placeholder="医嘱、注意事项...（输入拼音首字母联想）" />
+                <label className={labelClass}>备注</label>
+                <AutocompleteInput value={editingRecord.notes || ''} onChange={(v) => setEditingRecord({ ...editingRecord, notes: v })} placeholder="备注...（输入拼音首字母联想）" />
               </div>
               <div className="flex gap-3 justify-end pt-2">
                 <button type="button" onClick={() => setEditingRecord(null)} className="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200">取消</button>
@@ -257,6 +268,14 @@ export default function MedicalRecords() {
                 <AutocompleteInput value={form.pastHistory} onChange={(v) => setForm({ ...form, pastHistory: v })} placeholder="既往疾病史、手术史、过敏史...（输入拼音首字母联想）" />
               </div>
               <div>
+                <label className={labelClass}>口腔检查</label>
+                <AutocompleteInput value={form.oralExam} onChange={(v) => setForm({ ...form, oralExam: v })} placeholder="口内检查所见...（输入拼音首字母联想）" rows={3} />
+              </div>
+              <div>
+                <label className={labelClass}>辅助检查</label>
+                <AutocompleteInput value={form.auxExam} onChange={(v) => setForm({ ...form, auxExam: v })} placeholder="CBCT/全景片/化验等辅助检查结果...（输入拼音首字母联想）" rows={2} />
+              </div>
+              <div>
                 <label className={labelClass}>诊断 <span className="text-red-400">*</span></label>
                 <AutocompleteInput value={form.diagnosis} onChange={(v) => setForm({ ...form, diagnosis: v })} placeholder="诊断结果...（输入拼音首字母联想）" />
               </div>
@@ -267,16 +286,16 @@ export default function MedicalRecords() {
                 </div>
                 <div>
                   <label className={labelClass}>本次处置 <span className="text-red-400">*</span></label>
-                  <AutocompleteInput value={form.treatmentDone} onChange={(v) => setForm({ ...form, treatmentDone: v })} placeholder="本次治疗内容...（输入拼音首字母联想）" rows={3} />
+                  <AutocompleteInput value={form.treatment} onChange={(v) => setForm({ ...form, treatment: v })} placeholder="处置...（输入拼音首字母联想）" rows={3} />
                 </div>
               </div>
               <div>
-                <label className={labelClass}>处方用药</label>
-                <AutocompleteInput value={form.prescription} onChange={(v) => setForm({ ...form, prescription: v })} placeholder="开具的处方药物...（输入拼音首字母联想）" />
+                <label className={labelClass}>医嘱</label>
+                <AutocompleteInput value={form.orders} onChange={(v) => setForm({ ...form, orders: v })} placeholder="医嘱...（输入拼音首字母联想）" />
               </div>
               <div>
-                <label className={labelClass}>医嘱备注</label>
-                <AutocompleteInput value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} placeholder="医嘱、注意事项...（输入拼音首字母联想）" />
+                <label className={labelClass}>备注</label>
+                <AutocompleteInput value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} placeholder="备注...（输入拼音首字母联想）" />
               </div>
               <div className="flex gap-3 justify-end pt-2">
                 <button type="button" onClick={() => setShowNewForm(false)} className="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200">取消</button>
