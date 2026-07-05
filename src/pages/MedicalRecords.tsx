@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMedicalRecords, usePatients } from '../data/useStore'
 import AutocompleteInput from '../components/AutocompleteInput'
 import AIDictationDrawer from '../components/AIDictationDrawer'
+import AIConsultationDrawer from '../components/AIConsultationDrawer'
 import type { MedicalRecord, RecordType } from '../data/mock'
 
 const typeColors = { '初诊': 'bg-sky-100 text-sky-700', '复诊': 'bg-teal-100 text-teal-700', '急诊': 'bg-red-100 text-red-700', '手术': 'bg-purple-100 text-purple-700' }
@@ -23,6 +24,7 @@ export default function MedicalRecords() {
   const [editingRecord, setEditingRecord] = useState<MedicalRecord | null>(null)
   const [showNewForm, setShowNewForm] = useState(false)
   const [showAIDrawer, setShowAIDrawer] = useState(false)
+  const [showAIConsult, setShowAIConsult] = useState(false)
   const [form, setForm] = useState(emptyForm)
 
   const filtered = records.filter((r) => {
@@ -44,6 +46,11 @@ export default function MedicalRecords() {
       ...gen,
       teeth: [],
     })
+  }
+
+  // Save AI consultation record
+  const handleAIConsultSave = (record: Omit<MedicalRecord, 'id'>) => {
+    addRecord(record)
   }
 
   const handleSaveNew = () => {
@@ -75,6 +82,9 @@ export default function MedicalRecords() {
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索患者、诊断..." className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 transition-all placeholder:text-gray-400" />
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowAIConsult(true)} type="button" className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-blue-200/30 hover:shadow-lg hover:from-blue-600 hover:to-indigo-600 active:scale-95 transition-all">
+            <span className="text-base">🤖</span> AI智能接诊助手
+          </button>
           <button onClick={() => setShowAIDrawer(true)} type="button" className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-green-200/30 hover:shadow-lg hover:from-green-600 hover:to-emerald-600 active:scale-95 transition-all">
             <span className="text-base">🎤</span> AI口述病例
           </button>
@@ -311,6 +321,13 @@ export default function MedicalRecords() {
         onClose={() => setShowAIDrawer(false)}
         onSave={handleAISave}
         patientNames={patients.map((p) => p.name)}
+      />
+
+      {/* AI Consultation Drawer */}
+      <AIConsultationDrawer
+        isOpen={showAIConsult}
+        onClose={() => setShowAIConsult(false)}
+        onSaveRecord={handleAIConsultSave}
       />
     </div>
   )
