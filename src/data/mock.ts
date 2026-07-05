@@ -11,7 +11,7 @@ export interface User { id: string; name: string; role: Role; title: string; ava
 export interface Patient { id: string; name: string; gender: string; age: number; phone: string; idCard?: string; address?: string; allergies?: string; medicalHistory?: string; tags: string[]; totalVisits: number; lastVisit: string; createdAt: string; notes?: string }
 export interface Appointment { id: string; patientId: string; patientName: string; doctorName: string; date: string; time: string; type: string; status: ApptStatus; queueNumber?: string; note?: string }
 export interface ToothRecord { tooth: number; condition: ToothCondition; note?: string }
-export interface MedicalRecord { id: string; patientId: string; patientName: string; date: string; doctorName: string; type: RecordType; chiefComplaint: string; diagnosis: string; treatmentPlan: string; treatmentDone: string; teeth: ToothRecord[]; prescription?: string; notes?: string; fee?: number }
+export interface MedicalRecord { id: string; patientId: string; patientName: string; date: string; doctorName: string; type: RecordType; chiefComplaint: string; presentIllness: string; pastHistory: string; diagnosis: string; treatmentPlan: string; treatmentDone: string; teeth: ToothRecord[]; prescription?: string; notes?: string; fee?: number }
 export interface BillingItem { id: string; patientName: string; patientId: string; date: string; items: { name: string; category: string; price: number; qty: number }[]; total: number; paid: boolean; method?: PaymentMethod; cashier?: string }
 export interface Drug { id: string; name: string; category: string; spec: string; stock: number; unit: string; price: number; manufacturer: string; expiryDate: string; alertStock: number }
 export interface Imaging { id: string; patientName: string; patientId: string; type: 'CBCT' | '全景片' | '根尖片' | '头颅侧位片'; date: string; doctor: string; status: '已完成' | '待阅片'; report?: string }
@@ -93,124 +93,7 @@ export const allTeeth = [
 ]
 
 // --- 电子病历 ---
-export const medicalRecords: MedicalRecord[] = [
-  {
-    id: 'R001', patientId: 'P010', patientName: '孙雅文', date: '2026-07-02', doctorName: '陈志明', type: '初诊',
-    chiefComplaint: '自觉牙齿颜色偏黄，影响美观，希望改善笑容',
-    diagnosis: '外源性色素沉着，牙面色泽偏黄，未见明显牙体牙髓疾病',
-    treatmentPlan: '1. 冷光美白治疗（1次）；2. 配合家庭美白套装巩固效果；3. 建议半年后复查',
-    treatmentDone: '已完成冷光美白治疗1次，操作时长30分钟，术后即刻提升色阶约5级',
-    teeth: [
-      { tooth: 13, condition: 'healthy', note: '美白效果良好' },
-      { tooth: 12, condition: 'healthy' }, { tooth: 11, condition: 'healthy' },
-      { tooth: 21, condition: 'healthy' }, { tooth: 22, condition: 'healthy' }, { tooth: 23, condition: 'healthy' },
-    ],
-    notes: '治疗后24小时内避免摄入咖啡、茶、红酒等有色饮品，如有敏感可服用止痛药',
-    fee: 2800,
-  },
-  {
-    id: 'R002', patientId: 'P001', patientName: '王晓明', date: '2026-06-28', doctorName: '陈志明', type: '复诊',
-    chiefComplaint: '种植牙（#16）术后3个月，感觉良好，无不适',
-    diagnosis: '种植体周围软组织愈合良好，牙龈色泽正常，探诊无出血，骨结合稳定',
-    treatmentPlan: '1. 口腔卫生指导；2. 建议继续定期复查；3. 3个月后再次复查，无异常后可行上部修复',
-    treatmentDone: '完成术后3个月常规复查，CBCT显示种植体骨结合良好',
-    teeth: [{ tooth: 16, condition: 'implant', note: '士卓曼种植体，骨结合良好，愈合基台稳定' }],
-    notes: '患者口腔卫生维护优秀，建议继续保持',
-    fee: 150,
-  },
-  {
-    id: 'R003', patientId: 'P005', patientName: '陈伟强', date: '2026-07-01', doctorName: '陈志明', type: '复诊',
-    chiefComplaint: '常规洁牙，无明显不适',
-    diagnosis: '牙面少量色素附着，龈上少量牙结石（以下前牙区为主），牙龈无明显炎症',
-    treatmentPlan: '超声波洁治 + 喷砂抛光 + 口腔卫生宣教',
-    treatmentDone: '完成全口超声波洁治及喷砂抛光，氟化泡沫涂布防龋',
-    teeth: Array.from({ length: 32 }, (_, i) => ({ tooth: 18 + i <= 48 ? 18 + i : 0, condition: 'healthy' as ToothCondition })).filter(t => t.tooth >= 18 && t.tooth <= 48),
-    notes: '建议每年洁牙1-2次',
-    fee: 380,
-  },
-  {
-    id: 'R004', patientId: 'P002', patientName: '李芳华', date: '2026-06-25', doctorName: '林婉清', type: '初诊',
-    chiefComplaint: '牙齿排列不齐，笑时不敢露齿，希望矫正',
-    diagnosis: '安氏I类错颌畸形，上下牙列轻度拥挤（上颌4mm，下颌3mm），前牙深覆颌I°',
-    treatmentPlan: '1. Invisalign隐形矫治方案；2. 上颌扩弓 + 邻面去釉获得间隙；3. 预估周期18-22个月，约30副矫治器',
-    treatmentDone: '已完成口内扫描、面相及口内照采集、CBCT拍摄，Invisalign方案已提交，等待ClinCheck审核',
-    teeth: [
-      { tooth: 13, condition: 'healthy', note: '颊向错位1.5mm' },
-      { tooth: 23, condition: 'healthy', note: '唇向错位1mm' },
-      { tooth: 33, condition: 'healthy', note: '轻度扭转' },
-    ],
-    notes: '需拔除#18、#28、#38、#48智齿（择期），以提供后牙支抗空间',
-    fee: 42000,
-  },
-  {
-    id: 'R005', patientId: 'P003', patientName: '张建国', date: '2026-06-20', doctorName: '陈志明', type: '复诊',
-    chiefComplaint: '牙龈反复出血2月余，自觉口腔异味明显',
-    diagnosis: '慢性牙周炎（中度），多颗牙牙周袋深度4-6mm，探诊出血（+），#36、#46牙周袋7mm',
-    treatmentPlan: '1. 全口龈上洁治；2. 分区龈下刮治及根面平整（SRP），分4次完成；3. 牙周维护治疗，每3个月复查',
-    treatmentDone: '已完成全口龈上洁治 + 右上/左上区龈下刮治（局麻下），剩余右下/左下区待完成',
-    teeth: [
-      { tooth: 36, condition: 'decay', note: '牙周袋深度7mm，I°根分叉病变' },
-      { tooth: 46, condition: 'decay', note: '牙周袋深度7mm' },
-      { tooth: 16, condition: 'decay', note: '牙周袋深度5mm' },
-      { tooth: 26, condition: 'decay', note: '牙周袋深度5mm' },
-    ],
-    prescription: '复方氯己定含漱液 10ml tid × 7天（仅龈下刮治区使用）',
-    notes: '每次就诊前需测量血压，控制在140/90mmHg以下方可进行治疗。建议使用软毛牙刷，Bass刷牙法。',
-    fee: 3200,
-  },
-  {
-    id: 'R006', patientId: 'P004', patientName: '刘小美', date: '2026-07-01', doctorName: '张思远', type: '复诊',
-    chiefComplaint: '常规口腔检查，无不适',
-    diagnosis: '乳牙列完整，未见明显龋坏，口腔卫生状况良好，#16、#26、#36、#46已萌出至咬合平面',
-    treatmentPlan: '1. 窝沟封闭（第一恒磨牙4颗）；2. 口腔卫生指导；3. 半年复查',
-    treatmentDone: '已完成#16、#26、#36、#46窝沟封闭，使用3M Clinpro封闭剂',
-    teeth: [
-      { tooth: 16, condition: 'filled', note: '窝沟封闭' },
-      { tooth: 26, condition: 'filled', note: '窝沟封闭' },
-      { tooth: 36, condition: 'filled', note: '窝沟封闭' },
-      { tooth: 46, condition: 'filled', note: '窝沟封闭' },
-    ],
-    notes: '家长需监督孩子每天刷牙2次（早晚各一次），使用含氟牙膏，控制甜食摄入',
-    fee: 800,
-  },
-  {
-    id: 'R007', patientId: 'P006', patientName: '赵丽娜', date: '2026-06-08', doctorName: '陈志明', type: '手术',
-    chiefComplaint: '#16缺失3个月，影响咀嚼功能，希望修复',
-    diagnosis: '#16牙缺失（拔除后3个月），牙槽骨宽度及高度充足（CBCT测量：骨高度12mm，骨宽度7mm），角化龈宽度3mm',
-    treatmentPlan: '1. #16种植体植入术（士卓曼BLT 4.1×10mm）；2. 术后3-4个月骨结合后行上部修复；3. 术前预防性抗生素',
-    treatmentDone: '已完成种植一期手术，术中过程顺利，初期稳定性35Ncm，术后CBCT示种植体三维位置理想',
-    teeth: [{ tooth: 16, condition: 'implant', note: '士卓曼BLT 4.1×10mm，初期稳定性良好' }],
-    prescription: '1. 阿莫西林克拉维酸钾 625mg bid × 5天\n2. 布洛芬 400mg prn（疼痛时服用）\n3. 复方氯己定含漱液 10ml bid × 7天',
-    notes: '术后24小时内冰敷，24小时后温盐水漱口，避免术侧咀嚼，7天后拆线',
-    fee: 12800,
-  },
-  {
-    id: 'R008', patientId: 'P007', patientName: '周文博', date: '2026-06-05', doctorName: '林婉清', type: '初诊',
-    chiefComplaint: '家长诉孩子有"龅牙"倾向，张口呼吸习惯',
-    diagnosis: '混合牙列期，上颌前突趋势，深覆颌II°，安氏II类1分类倾向，口呼吸习惯（已排除腺样体肥大）',
-    treatmentPlan: '1. 早期干预：Twin-Block功能矫治器；2. 肌功能训练（唇肌、舌位训练）；3. 每2-3个月复查调整；4. 待恒牙列期评估是否需要二期固定矫正',
-    treatmentDone: '已完成初诊检查（面相、口内照、研究模型、头颅侧位片），取模制作Twin-Block矫治器',
-    teeth: [
-      { tooth: 11, condition: 'healthy', note: '唇倾，覆盖8mm' },
-      { tooth: 21, condition: 'healthy', note: '唇倾，覆盖7mm' },
-    ],
-    notes: '需要家长配合监督佩戴（每天至少14小时），初期可能有异物感，1-2周适应。配合肌功能训练（每天3次，每次5分钟）',
-    fee: 8500,
-  },
-  {
-    id: 'R009', patientId: 'P011', patientName: '钱大伟', date: '2026-06-18', doctorName: '陈志明', type: '复诊',
-    chiefComplaint: '#36、#37缺失多年，活动义齿不舒适，希望考虑种植修复',
-    diagnosis: '#36、#37缺失（缺失10年+），牙槽骨中度萎缩，CBCT示#36区骨高度8mm，#37区骨高度10mm',
-    treatmentPlan: '1. 心内科会诊评估手术风险；2. #36区需行上颌窦内提升植骨；3. #36、#37种植体植入（择期）；4. 术前调整抗凝方案',
-    treatmentDone: '已完成心内科会诊、凝血功能及血常规检查，各项指标满足手术要求',
-    teeth: [
-      { tooth: 36, condition: 'missing', note: '缺失10年，骨高度8mm，需植骨' },
-      { tooth: 37, condition: 'missing', note: '缺失10年，骨高度10mm，可直接种植' },
-    ],
-    notes: '患者服用阿司匹林，需术前5天停药（已与心内科确认）。手术需在心电监护下进行。',
-    fee: 24500,
-  },
-]
+// (病历数据已迁移至 useStore，旧 mock 数据已废弃)
 
 // --- 收费账单 ---
 export const billings: BillingItem[] = [

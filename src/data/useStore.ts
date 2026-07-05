@@ -12,7 +12,7 @@ const defaultAppointments: Appointment[] = [
 
 const defaultRecords: MedicalRecord[] = [
   { id: 'R001', patientId: 'P001', patientName: '王晓明', date: '2026-07-02', doctorName: '陈志明', type: '复诊',
-    chiefComplaint: '种植牙术后感觉良好', diagnosis: '种植体愈合正常', treatmentPlan: '继续观察', treatmentDone: '完成术后复查', teeth: [] },
+    chiefComplaint: '种植牙术后感觉良好', presentIllness: '3个月前于我院行#16种植体植入术，术后恢复顺利，无明显疼痛及肿胀', pastHistory: '否认高血压、糖尿病等系统性疾病史，否认药物过敏史', diagnosis: '种植体愈合正常', treatmentPlan: '继续观察，3个月后行上部修复', treatmentDone: '完成术后复查，CBCT示骨结合良好', teeth: [] },
 ]
 
 const defaultBillings: BillingItem[] = [
@@ -96,7 +96,11 @@ export function useMedicalRecords() {
     return newRecord
   }
 
-  return { records, addRecord, setRecords }
+  const updateRecord = (id: string, updates: Partial<MedicalRecord>) => {
+    setRecords((prev) => prev.map((r) => r.id === id ? { ...r, ...updates } : r))
+  }
+
+  return { records, addRecord, updateRecord, setRecords }
 }
 
 export function useBillings() {
