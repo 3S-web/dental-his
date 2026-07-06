@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { usePatients } from '../data/useStore'
 import { extractPatientName, searchPatient, createPatient } from '../agents/PatientAgent'
-import { createSpeechRecognition, mockStreamTranscribe } from '../agents/SpeechAgent'
+import { createSpeechRecognition, mockStreamTranscribe, hasRealSpeech } from '../agents/SpeechAgent'
 import { extractMedicalRecord } from '../agents/MedicalAgent'
 import { correctMedicalTerms, mockCorrectWithExplanations } from '../agents/CorrectionAgent'
 
@@ -257,6 +257,11 @@ export default function AIDictationDrawer({ isOpen, onClose, onSave }: AIDictati
           {phase === 'recording' && (
             <div className="space-y-4">
               <div className="bg-white border-2 border-red-200 rounded-2xl p-6 space-y-4">
+                {hasRealSpeech ? (
+                  <div className="text-center"><span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">🎙️ 真实语音识别已启动</span></div>
+                ) : (
+                  <div className="text-center"><span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">⚠️ 浏览器不支持语音，模拟模式</span></div>
+                )}
                 <div className="flex items-center justify-center gap-4">
                   <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" /></span>
                   <span className="text-lg font-bold text-red-500 font-mono">{formatTime(recordingTime)}</span>
