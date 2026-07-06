@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { usePatients } from '../data/useStore'
 import { extractPatientName, searchPatient, createPatient } from '../agents/PatientAgent'
-import { mockStreamTranscribe } from '../agents/SpeechAgent'
+import { createSpeechRecognition, mockStreamTranscribe } from '../agents/SpeechAgent'
 import { extractMedicalRecord } from '../agents/MedicalAgent'
 import { correctMedicalTerms, mockCorrectWithExplanations } from '../agents/CorrectionAgent'
 
@@ -27,6 +27,7 @@ export default function AIDictationDrawer({ isOpen, onClose, onSave }: AIDictati
   const [recordingTime, setRecordingTime] = useState(0)
   const [liveText, setLiveText] = useState('')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const recognitionRef = useRef<ReturnType<typeof createSpeechRecognition>>(null)
 
   // Processing
   const [processingSteps, setProcessingSteps] = useState<string[]>([])
@@ -44,6 +45,7 @@ export default function AIDictationDrawer({ isOpen, onClose, onSave }: AIDictati
 
   const resetAll = () => {
     if (timerRef.current) clearInterval(timerRef.current)
+    if (recognitionRef.current) { recognitionRef.current.stop(); recognitionRef.current = null }
     setPhase('input'); setInputText(''); setFoundPatient(null)
     setNewPatientForm({ name: '', gender: '男', age: '', phone: '' })
     setRecordingTime(0); setLiveText(''); setProcessingSteps([]); setCorrections([])
@@ -81,22 +83,48 @@ export default function AIDictationDrawer({ isOpen, onClose, onSave }: AIDictati
     setPhase('patient_found')
   }
 
-  // ③ Recording
+  // ③ Recording - use real Web Speech API
   const startRecording = () => {
     setPhase('recording'); setRecordingTime(0); setLiveText('')
     timerRef.current = setInterval(() => setRecordingTime((prev) => prev + 1), 1000)
-    ;(async () => {
-      let current = ''
-      for await (const chunk of mockStreamTranscribe()) {
-        current = chunk; setLiveText(current)
+
+    const recognition = createSpeechRecognition()
+    if (recognition) {
+      // Real speech recognition
+      recognitionRef.current = recognition
+      let finalText = ''
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+        let interim = ''
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalText += event.results[i][0].transcript
+          } else {
+            interim += event.results[i][0].transcript
+          }
+        }
+        const displayText = finalText + interim
+        setLiveText(displayText)
         if (liveTextRef.current) liveTextRef.current.scrollTop = liveTextRef.current.scrollHeight
       }
-    })()
+      recognition.onerror = () => { /* continue */ }
+      recognition.start()
+    } else {
+      // Fallback to mock
+      ;(async () => {
+        let current = ''
+        for await (const chunk of mockStreamTranscribe()) {
+          current = chunk; setLiveText(current)
+          if (liveTextRef.current) liveTextRef.current.scrollTop = liveTextRef.current.scrollHeight
+        }
+      })()
+    }
   }
 
   // ④ Stop → AI Processing
   const stopRecording = async () => {
     if (timerRef.current) clearInterval(timerRef.current)
+    if (recognitionRef.current) { recognitionRef.current.stop(); recognitionRef.current = null }
     setPhase('processing')
     const steps = ['正在理解口述内容...', '正在提取关键医学信息...', '正在修正医学术语...', '正在生成电子病历...']
     setProcessingSteps([])

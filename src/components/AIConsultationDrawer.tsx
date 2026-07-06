@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePatients } from '../data/useStore'
 import { extractPatientName, searchPatient, createPatient } from '../agents/PatientAgent'
-import { mockStreamTranscribe } from '../agents/SpeechAgent'
+import { createSpeechRecognition, mockStreamTranscribe } from '../agents/SpeechAgent'
 import { extractMedicalRecord } from '../agents/MedicalAgent'
 import { correctMedicalTerms, mockCorrectWithExplanations } from '../agents/CorrectionAgent'
 import { fillEMR, validateEMR } from '../agents/EMRAgent'
@@ -43,6 +43,7 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
   const [liveText, setLiveText] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const recognitionRef = useRef<ReturnType<typeof createSpeechRecognition>>(null)
 
   // AI processing
   const [agentSteps, setAgentSteps] = useState<AgentStep[]>([])
@@ -57,6 +58,7 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
   // Cleanup
   const resetAll = () => {
     if (timerRef.current) clearInterval(timerRef.current)
+    if (recognitionRef.current) { recognitionRef.current.stop(); recognitionRef.current = null }
     setWorkflow('idle')
     setInputText('')
     setFoundPatient(null)
@@ -101,26 +103,37 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
     setRecordingTime(0)
     setLiveText('')
 
-    timerRef.current = setInterval(() => {
-      setRecordingTime((prev) => prev + 1)
-    }, 1000)
+    timerRef.current = setInterval(() => setRecordingTime((prev) => prev + 1), 1000)
 
-    // Simulate streaming transcription
-    ;(async () => {
-      let currentText = ''
-      for await (const chunk of mockStreamTranscribe()) {
-        currentText = chunk
-        setLiveText(currentText)
-        if (liveTextRef.current) {
-          liveTextRef.current.scrollTop = liveTextRef.current.scrollHeight
+    const recognition = createSpeechRecognition()
+    if (recognition) {
+      recognitionRef.current = recognition
+      let finalText = ''
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (event: any) => {
+        let interim = ''
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) { finalText += event.results[i][0].transcript }
+          else { interim += event.results[i][0].transcript }
         }
+        const displayText = finalText + interim
+        setLiveText(displayText)
+        if (liveTextRef.current) liveTextRef.current.scrollTop = liveTextRef.current.scrollHeight
       }
-    })()
+      recognition.onerror = () => {}
+      recognition.start()
+    } else {
+      ;(async () => {
+        let currentText = ''
+        for await (const chunk of mockStreamTranscribe()) { currentText = chunk; setLiveText(currentText) }
+      })()
+    }
   }
 
   // ===== ③ Stop Recording → AI Processing =====
   const stopRecording = async () => {
     if (timerRef.current) clearInterval(timerRef.current)
+    if (recognitionRef.current) { recognitionRef.current.stop(); recognitionRef.current = null }
     setIsRecording(false)
     setWorkflow('processing')
 
