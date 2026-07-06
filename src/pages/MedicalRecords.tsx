@@ -320,7 +320,6 @@ export default function MedicalRecords() {
         isOpen={showAIDrawer}
         onClose={() => setShowAIDrawer(false)}
         onSave={handleAISave}
-        patientNames={patients.map((p) => p.name)}
       />
 
       {/* AI Consultation Drawer */}

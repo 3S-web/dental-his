@@ -1,154 +1,138 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
+import { usePatients } from '../data/useStore'
+import { extractPatientName, searchPatient, createPatient } from '../agents/PatientAgent'
+import { mockStreamTranscribe } from '../agents/SpeechAgent'
+import { extractMedicalRecord } from '../agents/MedicalAgent'
+import { correctMedicalTerms, mockCorrectWithExplanations } from '../agents/CorrectionAgent'
 
-interface GeneratedRecord {
-  chiefComplaint: string
-  presentIllness: string
-  pastHistory: string
-  oralExam: string
-  auxExam: string
-  diagnosis: string
-  treatmentPlan: string
-  treatment: string
-  orders: string
-  notes: string
-}
+type Phase = 'input' | 'patient_query' | 'patient_found' | 'patient_not_found' | 'recording' | 'processing' | 'result' | 'saved'
 
 interface AIDictationDrawerProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (record: GeneratedRecord) => void
-  patientNames: string[]
+  onSave: (record: { chiefComplaint: string; presentIllness: string; pastHistory: string; oralExam: string; auxExam: string; diagnosis: string; treatmentPlan: string; treatment: string; orders: string; notes: string }) => void
 }
 
-// Mock generated record (simulates AI output)
-const mockRecord: GeneratedRecord = {
-  chiefComplaint: '种植牙术后复诊',
-  presentIllness: '患者3个月前于我院完成#16种植体植入，恢复良好，无明显疼痛及肿胀。术后遵医嘱执行口腔卫生维护。',
-  pastHistory: '否认高血压、糖尿病等系统性疾病史，否认药物过敏史，否认手术外伤史。',
-  oralExam: '#16种植体周围牙龈色泽正常，探诊无出血，角化龈宽度充足。全口口腔卫生状况良好，未见明显龋坏，牙石（-），软垢（-）。',
-  auxExam: 'CBCT示#16种植体周围骨密度正常，骨结合良好，未见透射影。',
-  diagnosis: '种植体愈合正常，骨结合稳定，牙龈色泽正常，探诊无出血。',
-  treatmentPlan: '继续观察，3个月后行上部修复。建议继续保持口腔卫生，定期复查。',
-  treatment: '完成术后3个月常规复查，口腔卫生指导。',
-  orders: '保持口腔卫生，每日刷牙2次，使用软毛牙刷及牙线。按时复诊，不适随诊。',
-  notes: '患者配合度高，口腔卫生维护良好。',
-}
+export default function AIDictationDrawer({ isOpen, onClose, onSave }: AIDictationDrawerProps) {
+  const { patients, addPatient } = usePatients()
 
-type Phase = 'idle' | 'recording' | 'processing' | 'result'
+  const [phase, setPhase] = useState<Phase>('input')
+  const [inputText, setInputText] = useState('')
 
-export default function AIDictationDrawer({ isOpen, onClose, onSave, patientNames }: AIDictationDrawerProps) {
-  const [phase, setPhase] = useState<Phase>('idle')
+  // Patient
+  const [foundPatient, setFoundPatient] = useState<ReturnType<typeof searchPatient>>(null)
+  const [newPatientForm, setNewPatientForm] = useState({ name: '', gender: '男', age: '', phone: '' })
+
+  // Recording
   const [recordingTime, setRecordingTime] = useState(0)
   const [liveText, setLiveText] = useState('')
-  const [processingSteps, setProcessingSteps] = useState<string[]>([])
-  const [currentStep, setCurrentStep] = useState(0)
-  const [generatedRecord, setGeneratedRecord] = useState<GeneratedRecord>(mockRecord)
-  const [selectedPatient, setSelectedPatient] = useState('')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Processing
+  const [processingSteps, setProcessingSteps] = useState<string[]>([])
+  const [corrections, setCorrections] = useState<{ original: string; corrected: string; explanation: string }[]>([])
+
+  // Result
+  const [generatedRecord, setGeneratedRecord] = useState({
+    chiefComplaint: '', presentIllness: '', pastHistory: '', oralExam: '', auxExam: '',
+    diagnosis: '', treatmentPlan: '', treatment: '', orders: '', notes: '',
+  })
+
   const liveTextRef = useRef<HTMLDivElement>(null)
+  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
+  const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`
 
-  // Simulated live text during recording
-  const mockLiveLines = [
-    '患者主诉：种植牙术后复诊...',
-    '现病史询问中：3个月前于我院行种植体植入术...',
-    '术后恢复情况：无明显疼痛...',
-    '既往史采集：否认系统性疾病史...',
-    '过敏史：否认药物过敏...',
-    '诊断初步：种植体愈合正常...',
-  ]
-
-  // Cleanup on close
-  const handleClose = () => {
+  const resetAll = () => {
     if (timerRef.current) clearInterval(timerRef.current)
-    setPhase('idle')
-    setRecordingTime(0)
-    setLiveText('')
-    setProcessingSteps([])
-    setCurrentStep(0)
-    setGeneratedRecord(mockRecord)
-    setSelectedPatient('')
-    onClose()
+    setPhase('input'); setInputText(''); setFoundPatient(null)
+    setNewPatientForm({ name: '', gender: '男', age: '', phone: '' })
+    setRecordingTime(0); setLiveText(''); setProcessingSteps([]); setCorrections([])
+    setGeneratedRecord({ chiefComplaint: '', presentIllness: '', pastHistory: '', oralExam: '', auxExam: '', diagnosis: '', treatmentPlan: '', treatment: '', orders: '', notes: '' })
   }
+  const handleClose = () => { resetAll(); onClose() }
 
-  // Start recording
-  const startRecording = () => {
-    setPhase('recording')
-    setRecordingTime(0)
-    setLiveText('')
-    setProcessingSteps([])
-    setCurrentStep(0)
-
-    // Timer
-    timerRef.current = setInterval(() => {
-      setRecordingTime((prev) => prev + 1)
-    }, 1000)
-
-    // Simulate live text appearing
-    let lineIndex = 0
-    const textInterval = setInterval(() => {
-      if (lineIndex < mockLiveLines.length) {
-        setLiveText((prev) => prev + mockLiveLines[lineIndex] + '\n')
-        lineIndex++
-        // Auto-scroll
-        if (liveTextRef.current) {
-          liveTextRef.current.scrollTop = liveTextRef.current.scrollHeight
+  // ① Input submit → Look up patient
+  const handleInputSubmit = () => {
+    if (!inputText.trim()) return
+    const name = extractPatientName(inputText)
+    setPhase('patient_query')
+    setTimeout(() => {
+      if (name) {
+        const found = searchPatient(name, patients)
+        if (found) {
+          setFoundPatient(found)
+          setPhase('patient_found')
+        } else {
+          setNewPatientForm((prev) => ({ ...prev, name }))
+          setPhase('patient_not_found')
         }
       } else {
-        clearInterval(textInterval)
+        startRecording()
       }
-    }, 1200)
+    }, 600)
   }
 
-  // Stop recording and start AI processing
-  const stopRecording = () => {
+  // ② Create patient then proceed
+  const handleCreatePatient = () => {
+    if (!newPatientForm.name) return
+    const np = createPatient(newPatientForm.name, newPatientForm.gender, parseInt(newPatientForm.age) || 30, newPatientForm.phone)
+    addPatient({ name: np.name, gender: np.gender as '男' | '女', age: np.age, phone: np.phone || '未填写', allergies: '不详', medicalHistory: '不详', tags: [], address: '' })
+    setFoundPatient(np)
+    setPhase('patient_found')
+  }
+
+  // ③ Recording
+  const startRecording = () => {
+    setPhase('recording'); setRecordingTime(0); setLiveText('')
+    timerRef.current = setInterval(() => setRecordingTime((prev) => prev + 1), 1000)
+    ;(async () => {
+      let current = ''
+      for await (const chunk of mockStreamTranscribe()) {
+        current = chunk; setLiveText(current)
+        if (liveTextRef.current) liveTextRef.current.scrollTop = liveTextRef.current.scrollHeight
+      }
+    })()
+  }
+
+  // ④ Stop → AI Processing
+  const stopRecording = async () => {
     if (timerRef.current) clearInterval(timerRef.current)
-    setRecordingTime((prev) => prev)
     setPhase('processing')
+    const steps = ['正在理解口述内容...', '正在提取关键医学信息...', '正在修正医学术语...', '正在生成电子病历...']
+    setProcessingSteps([])
 
-    const steps = [
-      '正在分析主诉...',
-      '正在整理现病史...',
-      '正在提取既往史...',
-      '正在生成诊断意见...',
-      '正在制定治疗计划...',
-      '正在生成医嘱建议...',
-    ]
-
-    steps.forEach((step, i) => {
-      setTimeout(() => {
-        setProcessingSteps((prev) => [...prev, step])
-        setCurrentStep(i + 1)
-        if (i === steps.length - 1) {
-          setTimeout(() => {
-            setPhase('result')
-            setGeneratedRecord(mockRecord)
-          }, 500)
-        }
-      }, (i + 1) * 400)
-    })
-  }
-
-  // Auto-scroll live text
-  useEffect(() => {
-    if (liveTextRef.current) {
-      liveTextRef.current.scrollTop = liveTextRef.current.scrollHeight
+    for (let i = 0; i < steps.length; i++) {
+      await delay(500)
+      setProcessingSteps((prev) => [...prev, steps[i]])
     }
-  }, [liveText])
 
-  // Format time
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60)
-    const s = seconds % 60
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-  }
+    // Extract
+    const rawText = liveText || inputText
+    const extracted = extractMedicalRecord(rawText)
 
-  const updateField = (field: keyof GeneratedRecord, value: string) => {
-    setGeneratedRecord((prev) => ({ ...prev, [field]: value }))
+    // Corrections
+    const cs: typeof corrections = []
+    for await (const c of mockCorrectWithExplanations(rawText)) { cs.push(c); setCorrections([...cs]) }
+
+    // Generate
+    const corrected = correctMedicalTerms(rawText)
+    const reExtracted = extractMedicalRecord(corrected)
+    Object.assign(extracted, reExtracted)
+
+    if (foundPatient) extracted.patientName = foundPatient.name
+
+    setGeneratedRecord(extracted)
+    setPhase('result')
   }
 
   const handleSave = () => {
     onSave(generatedRecord)
-    handleClose()
+    setPhase('saved')
+    setTimeout(handleClose, 1500)
+  }
+
+  const updateField = (field: keyof typeof generatedRecord, value: string) => {
+    setGeneratedRecord((prev) => ({ ...prev, [field]: value }))
   }
 
   const textareaClass = "w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 transition-all resize-none"
@@ -157,191 +141,157 @@ export default function AIDictationDrawer({ isOpen, onClose, onSave, patientName
 
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/30 z-50 transition-opacity duration-300" onClick={handleClose} />
-
-      {/* Drawer */}
-      <div className="fixed top-0 right-0 h-full w-full max-w-[520px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out animate-[slideIn_0.3s_ease-out]"
-        style={{ animation: '0.3s ease-out slideIn' }}
-      >
+      <div className="fixed inset-0 bg-black/30 z-50" onClick={handleClose} />
+      <div className="fixed top-0 right-0 h-full w-full max-w-[520px] bg-white shadow-2xl z-50 flex flex-col" style={{ animation: 'slideIn 0.3s ease-out' }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 font-[family-name:var(--font-display)] flex items-center gap-2">
-              <span className="text-xl">🎤</span> AI口述病例
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">通过语音快速生成标准牙科电子病历</p>
+            <h2 className="text-lg font-bold text-gray-900 font-[family-name:var(--font-display)] flex items-center gap-2"><span className="text-xl">🎤</span> AI口述病例</h2>
+            <p className="text-xs text-gray-400 mt-0.5">通过语音或文字快速生成标准牙科电子病历</p>
           </div>
-          <button type="button" onClick={handleClose} className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+          <button type="button" onClick={handleClose} className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-5 overflow-y-auto" style={{ height: 'calc(100vh - 73px)' }}>
-          {/* Patient selection */}
-          {phase === 'idle' && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">选择患者（可选）</label>
-              <select value={selectedPatient} onChange={(e) => setSelectedPatient(e.target.value)}
-                className="w-full px-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400">
-                <option value="">不选择患者</option>
-                {patientNames.map((name) => <option key={name} value={name}>{name}</option>)}
-              </select>
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {/* Input */}
+          {phase === 'input' && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs text-gray-500 space-y-1.5">
+                <p className="font-semibold text-gray-600 mb-2">💡 试试这样说：</p>
+                <p>• "张三来复诊，种植牙三个月了"</p>
+                <p>• "李四第一次来，牙疼三天"</p>
+                <p>• "王五今天洁牙，牙龈有点出血"</p>
+              </div>
+              <textarea rows={4} value={inputText} onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleInputSubmit() } }}
+                placeholder="例如：张三今天来复诊，种植三个月了，恢复得挺好..." className={textareaClass + ' text-base'} autoFocus />
+              <button type="button" onClick={handleInputSubmit} disabled={!inputText.trim()}
+                className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${inputText.trim() ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white shadow-lg shadow-teal-200/30 hover:shadow-xl active:scale-[0.98]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+                🎤 开始口述病例
+              </button>
             </div>
           )}
 
-          {/* Recording area */}
-          {(phase === 'idle' || phase === 'recording') && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
-              {/* Recording controls */}
-              <div className="flex items-center justify-center gap-4">
-                {phase === 'idle' && (
-                  <button type="button" onClick={startRecording}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold rounded-full shadow-lg shadow-red-200/30 hover:shadow-xl hover:from-red-600 hover:to-rose-600 active:scale-95 transition-all">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" /><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" /></svg>
-                    开始录音
-                  </button>
-                )}
-                {phase === 'recording' && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
-                      </span>
-                      <span className="text-sm font-semibold text-red-500 font-mono">{formatTime(recordingTime)}</span>
-                    </div>
-                    <button type="button" onClick={stopRecording}
-                      className="flex items-center gap-2 px-6 py-3 bg-red-100 text-red-600 font-semibold rounded-full hover:bg-red-200 active:scale-95 transition-all">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
-                      停止录音
-                    </button>
-                  </>
-                )}
+          {/* Patient Query */}
+          {phase === 'patient_query' && (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-teal-50 flex items-center justify-center">
+                <svg className="w-8 h-8 text-teal-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
               </div>
+              <p className="text-sm font-medium text-gray-600">🔍 正在查询患者信息...</p>
+            </div>
+          )}
 
-              {/* Live text display */}
-              {phase === 'recording' && (
-                <div
-                  ref={liveTextRef}
-                  className="bg-gray-50 border border-gray-200 rounded-xl p-4 h-48 overflow-y-auto"
-                >
-                  {liveText ? (
-                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-mono">{liveText}</p>
-                  ) : (
-                    <p className="text-sm text-gray-400 italic">等待语音输入...</p>
+          {/* Patient Found */}
+          {phase === 'patient_found' && foundPatient && (
+            <div className="space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-5 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white font-bold text-xl shadow-md shrink-0">{foundPatient.name[0]}</div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1"><svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span className="text-sm font-bold text-green-800">已找到患者</span></div>
+                  <p className="text-lg font-bold text-gray-900 font-[family-name:var(--font-display)]">{foundPatient.name}</p>
+                  <p className="text-sm text-gray-500">{foundPatient.gender} · {foundPatient.age}岁 · {foundPatient.phone}</p>
+                  <p className="text-xs text-gray-400 mt-1">最近就诊：{foundPatient.lastVisit} · 累计{foundPatient.totalVisits}次</p>
+                </div>
+              </div>
+              <div className="text-center space-y-3">
+                <p className="text-sm text-gray-500">是否开始记录本次病历？</p>
+                <div className="flex gap-3">
+                  <button type="button" onClick={startRecording} className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg active:scale-[0.98] transition-all">🎤 开始录音记录</button>
+                  <button type="button" onClick={() => setPhase('input')} className="px-5 py-3 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200">重新输入</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Patient Not Found */}
+          {phase === 'patient_not_found' && (
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-3"><svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg><span className="text-sm font-bold text-amber-800">未找到该患者</span></div>
+                <p className="text-sm text-amber-600">系统将自动创建新患者，请确认信息</p>
+              </div>
+              <div className="space-y-3 bg-white border border-gray-200 rounded-2xl p-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-semibold text-gray-700 mb-1">姓名 *</label><input type="text" value={newPatientForm.name} onChange={(e) => setNewPatientForm({ ...newPatientForm, name: e.target.value })} className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                  <div><label className="block text-xs font-semibold text-gray-700 mb-1">性别</label><select value={newPatientForm.gender} onChange={(e) => setNewPatientForm({ ...newPatientForm, gender: e.target.value })} className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400"><option>男</option><option>女</option></select></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-xs font-semibold text-gray-700 mb-1">年龄</label><input type="number" value={newPatientForm.age} onChange={(e) => setNewPatientForm({ ...newPatientForm, age: e.target.value })} className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                  <div><label className="block text-xs font-semibold text-gray-700 mb-1">手机号</label><input type="tel" value={newPatientForm.phone} onChange={(e) => setNewPatientForm({ ...newPatientForm, phone: e.target.value })} className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400" /></div>
+                </div>
+                <button type="button" onClick={handleCreatePatient} disabled={!newPatientForm.name} className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-all ${newPatientForm.name ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white shadow-md hover:shadow-lg active:scale-[0.98]' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>创建患者并继续</button>
+              </div>
+            </div>
+          )}
+
+          {/* Recording */}
+          {phase === 'recording' && (
+            <div className="space-y-4">
+              <div className="bg-white border-2 border-red-200 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-center gap-4">
+                  <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" /></span>
+                  <span className="text-lg font-bold text-red-500 font-mono">{formatTime(recordingTime)}</span>
+                  <button type="button" onClick={stopRecording} className="px-6 py-3 bg-red-100 text-red-600 font-semibold rounded-full hover:bg-red-200 active:scale-95 transition-all"><svg className="w-5 h-5 inline mr-1" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>停止录音</button>
+                </div>
+                <div ref={liveTextRef} className="bg-gray-50 border border-gray-200 rounded-xl p-4 h-48 overflow-y-auto">
+                  {liveText ? <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{liveText}</p> : <div className="flex items-center gap-2 text-sm text-gray-400"><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" /><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} /><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} /><span className="ml-2">正在聆听...</span></div>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Processing */}
+          {phase === 'processing' && (
+            <div className="space-y-4">
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-teal-500 flex items-center justify-center"><svg className="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg></div>
+                  <div><p className="text-sm font-bold text-gray-800">AI正在整理病例...</p><p className="text-xs text-gray-400">{processingSteps.length}/4 步完成</p></div>
+                </div>
+                <div className="space-y-2">
+                  {processingSteps.map((step, i) => (
+                    <div key={i} className="flex items-center gap-2.5"><svg className="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg><span className="text-sm text-green-600">{step}</span></div>
+                  ))}
+                  {processingSteps.length < 4 && (
+                    <div className="flex items-center gap-2.5"><svg className="w-4 h-4 text-teal-500 animate-spin shrink-0" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg><span className="text-sm text-teal-600 font-medium">处理中...</span></div>
                   )}
                 </div>
-              )}
-
-              {phase === 'idle' && (
-                <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center">
-                  <svg className="w-10 h-10 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                  <p className="text-sm text-gray-400">点击"开始录音"按钮，模拟口述病例采集</p>
-                  <p className="text-xs text-gray-300 mt-1">录音结束后AI将自动整理生成病历</p>
+              </div>
+              {corrections.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                  <p className="text-xs font-bold text-amber-700 mb-2">🔧 医学术语修正</p>
+                  <div className="space-y-1.5">{corrections.map((c) => (<div key={c.original} className="text-xs"><span className="text-gray-400 line-through">"{c.original}"</span><span className="mx-1">→</span><span className="text-green-700 font-medium">"{c.corrected}"</span></div>))}</div>
                 </div>
               )}
             </div>
           )}
 
-          {/* AI Processing */}
-          {phase === 'processing' && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-teal-500 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-800">AI正在整理病例...</p>
-                  <p className="text-xs text-gray-400">正在分析语音内容并生成结构化病历</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {processingSteps.map((step, i) => (
-                  <div key={i} className="flex items-center gap-2.5 animate-[fadeIn_0.3s_ease-out]">
-                    {i < currentStep - 1 ? (
-                      <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    ) : i === currentStep - 1 ? (
-                      <svg className="w-4 h-4 text-teal-500 animate-spin shrink-0" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                    ) : (
-                      <div className="w-4 h-4 rounded-full border-2 border-gray-200 shrink-0" />
-                    )}
-                    <span className={`text-sm ${i < currentStep - 1 ? 'text-green-600' : i === currentStep - 1 ? 'text-teal-600 font-medium' : 'text-gray-300'}`}>
-                      {step}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Generated record */}
+          {/* Result */}
           {phase === 'result' && (
             <div className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center text-xl shrink-0">✅</div>
-                <div>
-                  <p className="text-sm font-bold text-green-800">AI病历生成完成</p>
-                  <p className="text-xs text-green-600">您可以检查和修改以下字段，确认后保存到电子病历</p>
-                </div>
-              </div>
-
-              {/* Editable fields */}
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3"><span className="text-xl">✅</span><div><p className="text-sm font-bold text-green-800">AI病历生成完成</p><p className="text-xs text-green-600">请检查并修改，确认后保存到电子病历</p></div></div>
               {[
-                { label: '主诉', field: 'chiefComplaint' as const, rows: 2 },
-                { label: '现病史', field: 'presentIllness' as const, rows: 3 },
-                { label: '既往史', field: 'pastHistory' as const, rows: 2 },
-                { label: '口腔检查', field: 'oralExam' as const, rows: 3 },
-                { label: '辅助检查', field: 'auxExam' as const, rows: 2 },
-                { label: '诊断', field: 'diagnosis' as const, rows: 2 },
-                { label: '治疗计划', field: 'treatmentPlan' as const, rows: 2 },
-                { label: '处置', field: 'treatment' as const, rows: 3 },
-                { label: '医嘱', field: 'orders' as const, rows: 2 },
-                { label: '备注', field: 'notes' as const, rows: 2 },
-              ].map(({ label, field, rows }) => (
-                <div key={field}>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">{label}</label>
-                  <textarea
-                    rows={rows}
-                    value={generatedRecord[field]}
-                    onChange={(e) => updateField(field, e.target.value)}
-                    className={textareaClass}
-                  />
-                </div>
-              ))}
-
-              {/* Action buttons */}
+                { label: '主诉', field: 'chiefComplaint' as const, rows: 2 }, { label: '现病史', field: 'presentIllness' as const, rows: 3 },
+                { label: '既往史', field: 'pastHistory' as const, rows: 2 }, { label: '口腔检查', field: 'oralExam' as const, rows: 3 },
+                { label: '辅助检查', field: 'auxExam' as const, rows: 2 }, { label: '诊断', field: 'diagnosis' as const, rows: 2 },
+                { label: '治疗计划', field: 'treatmentPlan' as const, rows: 2 }, { label: '处置', field: 'treatment' as const, rows: 3 },
+                { label: '医嘱', field: 'orders' as const, rows: 2 }, { label: '备注', field: 'notes' as const, rows: 2 },
+              ].map(({ label, field, rows }) => (<div key={field}><label className="block text-xs font-semibold text-gray-700 mb-1">{label}</label><textarea rows={rows} value={generatedRecord[field]} onChange={(e) => updateField(field, e.target.value)} className={textareaClass} /></div>))}
               <div className="flex gap-3 pt-2 pb-4">
-                <button type="button" onClick={() => { setPhase('idle'); setGeneratedRecord(mockRecord) }}
-                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
-                  🔄 重新生成
-                </button>
-                <button type="button" onClick={handleSave}
-                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl shadow-md shadow-teal-200/30 hover:shadow-lg active:scale-95 transition-all">
-                  💾 保存到电子病历
-                </button>
+                <button type="button" onClick={() => { setPhase('input'); setGeneratedRecord({ chiefComplaint: '', presentIllness: '', pastHistory: '', oralExam: '', auxExam: '', diagnosis: '', treatmentPlan: '', treatment: '', orders: '', notes: '' }) }} className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200">🔄 重新开始</button>
+                <button type="button" onClick={handleSave} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl shadow-md shadow-teal-200/30 hover:shadow-lg active:scale-95">💾 保存到电子病历</button>
               </div>
             </div>
+          )}
+
+          {/* Saved */}
+          {phase === 'saved' && (
+            <div className="flex flex-col items-center justify-center py-16 space-y-4"><div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center"><svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div><p className="text-lg font-bold text-gray-900">✅ 病历已保存</p><p className="text-sm text-gray-400">即将关闭...</p></div>
           )}
         </div>
       </div>
-
-      {/* Slide-in animation keyframes */}
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+      <style>{`@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
     </>
   )
 }
