@@ -1,9 +1,17 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useMedicalRecords, usePatients } from '../data/useStore'
 import AutocompleteInput from '../components/AutocompleteInput'
 import AIDictationDrawer from '../components/AIDictationDrawer'
 import AIConsultationDrawer from '../components/AIConsultationDrawer'
 import type { MedicalRecord, RecordType } from '../data/mock'
+import type { Role } from '../data/mock'
+
+function getRegisteredDoctors(): { name: string; workId: string }[] {
+  try {
+    const users: Record<string, { name: string; workId: string; role: Role }> = JSON.parse(localStorage.getItem('his_users') || '{}')
+    return Object.values(users).filter(u => u.role === 'doctor').map(u => ({ name: u.name, workId: u.workId }))
+  } catch { return [] }
+}
 
 const typeColors = { '初诊': 'bg-sky-100 text-sky-700', '复诊': 'bg-teal-100 text-teal-700', '急诊': 'bg-red-100 text-red-700', '手术': 'bg-purple-100 text-purple-700' }
 
@@ -18,6 +26,8 @@ const emptyForm = {
 export default function MedicalRecords() {
   const { records, addRecord, updateRecord } = useMedicalRecords()
   const { patients } = usePatients()
+  const doctorList = useMemo(() => getRegisteredDoctors(), [])
+  const defaultDoctor = doctorList[0]?.name || '陈志明'
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null)
@@ -41,7 +51,7 @@ export default function MedicalRecords() {
       patientName: 'AI口述患者',
       patientId: '',
       type: '复诊',
-      doctorName: '陈志明',
+      doctorName: defaultDoctor,
       date: new Date().toISOString().split('T')[0],
       ...gen,
       teeth: [],
@@ -57,7 +67,7 @@ export default function MedicalRecords() {
     if (!form.patientName || !form.diagnosis || !form.treatment) return
     addRecord({
       ...form,
-      doctorName: '陈志明', date: new Date().toISOString().split('T')[0],
+      doctorName: defaultDoctor, date: new Date().toISOString().split('T')[0],
       patientId: patients.find(p => p.name === form.patientName)?.id || '',
       teeth: [],
     })

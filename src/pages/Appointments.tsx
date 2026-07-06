@@ -1,6 +1,14 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useAppointments } from '../data/useStore'
 import type { ApptStatus } from '../data/mock'
+import type { Role } from '../data/mock'
+
+function getRegisteredDoctors(): { name: string; workId: string }[] {
+  try {
+    const users: Record<string, { name: string; workId: string; role: Role }> = JSON.parse(localStorage.getItem('his_users') || '{}')
+    return Object.values(users).filter(u => u.role === 'doctor').map(u => ({ name: u.name, workId: u.workId }))
+  } catch { return [] }
+}
 
 const statusColors: Record<ApptStatus, string> = { waiting: 'bg-amber-100 text-amber-700', confirmed: 'bg-teal-100 text-teal-700', in_progress: 'bg-sky-100 text-sky-700', completed: 'bg-green-100 text-green-700', cancelled: 'bg-red-100 text-red-500' }
 const statusLabels: Record<ApptStatus, string> = { waiting: '候诊', confirmed: '已确认', in_progress: '治疗中', completed: '已完成', cancelled: '已取消' }
@@ -10,7 +18,9 @@ export default function Appointments() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<ApptStatus | 'all'>('all')
   const [showNewForm, setShowNewForm] = useState(false)
-  const [newAppt, setNewAppt] = useState({ patientName: '', doctorName: '陈志明', date: '', time: '', type: '', note: '' })
+  const doctorList = useMemo(() => getRegisteredDoctors(), [])
+  const defaultDoctor = doctorList[0]?.name || '陈志明'
+  const [newAppt, setNewAppt] = useState({ patientName: '', doctorName: defaultDoctor, date: '', time: '', type: '', note: '' })
 
   const filtered = appts.filter((a) => {
     if (statusFilter !== 'all' && a.status !== statusFilter) return false
@@ -23,7 +33,7 @@ export default function Appointments() {
   const handleAddAppointment = () => {
     if (!newAppt.patientName || !newAppt.date || !newAppt.time || !newAppt.type) return
     addAppointment({ ...newAppt, patientId: '', status: 'confirmed' })
-    setNewAppt({ patientName: '', doctorName: '陈志明', date: '', time: '', type: '', note: '' })
+    setNewAppt({ patientName: '', doctorName: defaultDoctor, date: '', time: '', type: '', note: '' })
     setShowNewForm(false)
   }
 
@@ -124,7 +134,7 @@ export default function Appointments() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">医生</label>
                   <select value={newAppt.doctorName} onChange={(e) => setNewAppt({ ...newAppt, doctorName: e.target.value })} className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400">
-                    <option>陈志明</option><option>林婉清</option><option>张思远</option>
+                    {doctorList.length > 0 ? doctorList.map(d => <option key={d.workId}>{d.name}</option>) : <><option>陈志明</option><option>林婉清</option><option>张思远</option></>}
                   </select>
                 </div>
               </div>
