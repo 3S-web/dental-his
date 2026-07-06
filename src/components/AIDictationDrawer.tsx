@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { usePatients } from '../data/useStore'
 import { extractPatientName, searchPatient, createPatient } from '../agents/PatientAgent'
-import { createSpeechRecognition, mockStreamTranscribe, hasRealSpeech } from '../agents/SpeechAgent'
+import { createSpeechRecognition, hasRealSpeech } from '../agents/SpeechAgent'
 import { extractMedicalRecord } from '../agents/MedicalAgent'
 import { correctMedicalTerms, mockCorrectWithExplanations } from '../agents/CorrectionAgent'
 
@@ -83,42 +83,29 @@ export default function AIDictationDrawer({ isOpen, onClose, onSave }: AIDictati
     setPhase('patient_found')
   }
 
-  // ③ Recording - use real Web Speech API
+  // ③ Recording - use real Web Speech API, no mock fallback
   const startRecording = () => {
     setPhase('recording'); setRecordingTime(0); setLiveText('')
-    timerRef.current = setInterval(() => setRecordingTime((prev) => prev + 1), 1000)
 
     const recognition = createSpeechRecognition()
     if (recognition) {
-      // Real speech recognition
+      timerRef.current = setInterval(() => setRecordingTime((prev) => prev + 1), 1000)
       recognitionRef.current = recognition
       let finalText = ''
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recognition.onresult = (event: any) => {
+      recognition.onresult = (event: any) => {
         let interim = ''
         for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            finalText += event.results[i][0].transcript
-          } else {
-            interim += event.results[i][0].transcript
-          }
+          if (event.results[i].isFinal) { finalText += event.results[i][0].transcript }
+          else { interim += event.results[i][0].transcript }
         }
-        const displayText = finalText + interim
-        setLiveText(displayText)
+        setLiveText(finalText + interim)
         if (liveTextRef.current) liveTextRef.current.scrollTop = liveTextRef.current.scrollHeight
       }
-      recognition.onerror = () => { /* continue */ }
+      recognition.onerror = () => {}
       recognition.start()
-    } else {
-      // Fallback to mock
-      ;(async () => {
-        let current = ''
-        for await (const chunk of mockStreamTranscribe()) {
-          current = chunk; setLiveText(current)
-          if (liveTextRef.current) liveTextRef.current.scrollTop = liveTextRef.current.scrollHeight
-        }
-      })()
     }
+    // If no real speech support, stay in recording phase with empty text - user can still type or stop
   }
 
   // ④ Stop → AI Processing
@@ -267,9 +254,18 @@ export default function AIDictationDrawer({ isOpen, onClose, onSave }: AIDictati
                   <span className="text-lg font-bold text-red-500 font-mono">{formatTime(recordingTime)}</span>
                   <button type="button" onClick={stopRecording} className="px-6 py-3 bg-red-100 text-red-600 font-semibold rounded-full hover:bg-red-200 active:scale-95 transition-all"><svg className="w-5 h-5 inline mr-1" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>停止录音</button>
                 </div>
-                <div ref={liveTextRef} className="bg-gray-50 border border-gray-200 rounded-xl p-4 h-48 overflow-y-auto">
-                  {liveText ? <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{liveText}</p> : <div className="flex items-center gap-2 text-sm text-gray-400"><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" /><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} /><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} /><span className="ml-2">正在聆听...</span></div>}
-                </div>
+                {hasRealSpeech ? (
+                  <div ref={liveTextRef} className="bg-gray-50 border border-gray-200 rounded-xl p-4 h-48 overflow-y-auto">
+                    {liveText ? <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{liveText}</p> : <div className="flex items-center gap-2 text-sm text-gray-400"><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" /><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} /><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} /><span className="ml-2">正在聆听，请说话...</span></div>}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-xs text-amber-600 mb-2">⚠️ 浏览器不支持语音识别，请在下方手动输入病历内容</p>
+                    <textarea rows={6} value={liveText} onChange={(e) => setLiveText(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 resize-none"
+                      placeholder="请在此输入患者的病历内容，例如：主诉牙疼三天，冷热刺激痛，检查发现深龋..." />
+                  </div>
+                )}
               </div>
             </div>
           )}
