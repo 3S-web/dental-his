@@ -1,8 +1,18 @@
+import { useMemo } from 'react'
 import { reportData } from '../data/mock'
+import type { Role } from '../data/mock'
+
+function getRegisteredDoctors(): { name: string; workId: string }[] {
+  try {
+    const users: Record<string, { name: string; workId: string; role: Role }> = JSON.parse(localStorage.getItem('his_users') || '{}')
+    return Object.values(users).filter(u => u.role === 'doctor').map(u => ({ name: u.name, workId: u.workId }))
+  } catch { return [] }
+}
 
 export default function Reports() {
   const { monthlyRevenue, serviceDistribution, patientStats } = reportData
-  const maxRev = Math.max(...monthlyRevenue.map((m) => m.value))
+  const doctors = useMemo(() => getRegisteredDoctors(), [])
+  const maxRev = Math.max(...monthlyRevenue.map((m) => m.value), 1)
   const maxService = Math.max(...serviceDistribution.map((s) => s.value))
 
   return (
@@ -77,17 +87,15 @@ export default function Reports() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {[
-                { name: '陈志明', visits: 156, surgeries: 42, satisfaction: '99.2%', revenue: '¥186万' },
-                { name: '林婉清', visits: 112, surgeries: 8, satisfaction: '98.5%', revenue: '¥82万' },
-                { name: '张思远', visits: 44, surgeries: 2, satisfaction: '97.8%', revenue: '¥18万' },
-              ].map((doc) => (
+              {doctors.length === 0 ? (
+                <tr><td colSpan={5} className="py-8 text-center text-gray-400 text-sm">暂无注册医生，请先注册医生账号</td></tr>
+              ) : doctors.map((doc) => (
                 <tr key={doc.name} className="hover:bg-gray-50/50 transition-colors">
                   <td className="py-3 pr-4 font-semibold text-gray-800">{doc.name}</td>
-                  <td className="py-3 pr-4 text-gray-600">{doc.visits} 人次</td>
-                  <td className="py-3 pr-4 text-gray-600">{doc.surgeries} 台</td>
-                  <td className="py-3 pr-4"><span className="text-green-600 font-semibold">{doc.satisfaction}</span></td>
-                  <td className="py-3 font-semibold text-gray-800">{doc.revenue}</td>
+                  <td className="py-3 pr-4 text-gray-600">- 人次</td>
+                  <td className="py-3 pr-4 text-gray-600">- 台</td>
+                  <td className="py-3 pr-4"><span className="text-green-600 font-semibold">-</span></td>
+                  <td className="py-3 font-semibold text-gray-800">-</td>
                 </tr>
               ))}
             </tbody>

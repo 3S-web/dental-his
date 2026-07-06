@@ -152,9 +152,9 @@ export const imagings: Imaging[] = [
 // --- 统计报表数据 ---
 export const reportData: ReportData = {
   monthlyRevenue: [
-    { month: '1月', value: 185000 }, { month: '2月', value: 142000 }, { month: '3月', value: 210000 },
-    { month: '4月', value: 238000 }, { month: '5月', value: 265000 }, { month: '6月', value: 286500 },
-    { month: '7月', value: 152000 },
+    { month: '1月', value: 0 }, { month: '2月', value: 0 }, { month: '3月', value: 0 },
+    { month: '4月', value: 0 }, { month: '5月', value: 0 }, { month: '6月', value: 0 },
+    { month: '7月', value: 0 },
   ],
   serviceDistribution: [
     { name: '种植牙', value: 35 }, { name: '正畸', value: 28 }, { name: '牙周治疗', value: 15 },

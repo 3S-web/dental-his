@@ -23,7 +23,7 @@ export interface CurrentUser {
 
 function App() {
   const [role, setRole] = useState<Role>('doctor')
-  const [currentUser, setCurrentUser] = useState<CurrentUser>({ name: '陈志明', workId: 'U001', account: 'doctor1', role: 'doctor' })
+  const [currentUser, setCurrentUser] = useState<CurrentUser>({ name: '', workId: '', account: '', role: 'doctor' })
   const [loggedIn, setLoggedIn] = useState(false)
 
   if (!loggedIn) {

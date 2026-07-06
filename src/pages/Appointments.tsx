@@ -19,7 +19,7 @@ export default function Appointments() {
   const [statusFilter, setStatusFilter] = useState<ApptStatus | 'all'>('all')
   const [showNewForm, setShowNewForm] = useState(false)
   const doctorList = useMemo(() => getRegisteredDoctors(), [])
-  const defaultDoctor = doctorList[0]?.name || '陈志明'
+  const defaultDoctor = doctorList[0]?.name || ''
   const [newAppt, setNewAppt] = useState({ patientName: '', doctorName: defaultDoctor, date: '', time: '', type: '', note: '' })
 
   const filtered = appts.filter((a) => {
@@ -134,7 +134,7 @@ export default function Appointments() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">医生</label>
                   <select value={newAppt.doctorName} onChange={(e) => setNewAppt({ ...newAppt, doctorName: e.target.value })} className="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400">
-                    {doctorList.length > 0 ? doctorList.map(d => <option key={d.workId}>{d.name}</option>) : <><option>陈志明</option><option>林婉清</option><option>张思远</option></>}
+                    {doctorList.length > 0 ? doctorList.map(d => <option key={d.workId}>{d.name}</option>) : <option value="">请先注册医生</option>}
                   </select>
                 </div>
               </div>

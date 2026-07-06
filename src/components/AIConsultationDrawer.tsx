@@ -212,7 +212,10 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
   const handleSave = () => {
     const patientName = foundPatient?.name || 'AI接诊患者'
     const patientId = foundPatient?.id || ''
-    const record = fillEMR(extractedRecord, patientName, patientId, '陈志明')
+    const doctors = JSON.parse(localStorage.getItem('his_users') || '{}')
+    const doctorList: { name: string }[] = Object.values(doctors)
+    const doctorName = doctorList[0]?.name || '接诊医生'
+    const record = fillEMR(extractedRecord, patientName, patientId, doctorName)
     const validation = validateEMR(record)
     if (!validation.valid) {
       alert(`请填写以下必填字段：${validation.missing.join('、')}`)

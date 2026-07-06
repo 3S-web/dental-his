@@ -1,4 +1,17 @@
+import { useMemo } from 'react'
+import type { Role } from '../data/mock'
+
+const roleLabels: Record<Role, string> = { doctor: '医生', nurse: '护士', reception: '前台', admin: '管理员' }
+
+function getRegisteredUsers(): { name: string; workId: string; role: Role }[] {
+  try {
+    const users: Record<string, { name: string; workId: string; role: Role }> = JSON.parse(localStorage.getItem('his_users') || '{}')
+    return Object.values(users)
+  } catch { return [] }
+}
+
 export default function Settings() {
+  const registeredUsers = useMemo(() => getRegisteredUsers(), [])
   return (
     <div className="space-y-5 max-w-3xl">
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
@@ -23,27 +36,21 @@ export default function Settings() {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
         <h3 className="font-bold text-gray-900 font-[family-name:var(--font-display)] mb-5">用户管理</h3>
         <div className="space-y-3">
-          {[
-            { name: '陈志明', role: '医生 · 主任医师', status: '在线' },
-            { name: '林婉清', role: '医生 · 副主任医师', status: '在线' },
-            { name: '张思远', role: '医生 · 主治医师', status: '离线' },
-            { name: '李敏', role: '护士 · 护士长', status: '在线' },
-            { name: '赵琳', role: '前台 · 主管', status: '在线' },
-          ].map((user) => (
-            <div key={user.name} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+          {registeredUsers.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">暂无注册用户，请先注册账号</p>
+          ) : registeredUsers.map((user) => (
+            <div key={user.workId} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">{user.name[0]}</div>
                 <div>
                   <p className="text-sm font-semibold text-gray-800">{user.name}</p>
-                  <p className="text-xs text-gray-400">{user.role}</p>
+                  <p className="text-xs text-gray-400">{roleLabels[user.role]} · 工号{user.workId}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${user.status === '在线' ? 'text-green-600' : 'text-gray-400'}`}>
-                  <span className={`w-2 h-2 rounded-full ${user.status === '在线' ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  {user.status}
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />在线
                 </span>
-                <button type="button" className="text-xs text-teal-600 font-semibold hover:underline">编辑</button>
               </div>
             </div>
           ))}
@@ -54,7 +61,7 @@ export default function Settings() {
         <h3 className="font-bold text-gray-900 font-[family-name:var(--font-display)] mb-5">系统日志</h3>
         <div className="space-y-2 text-sm">
           {[
-            { time: '2026-07-02 08:30', action: '陈志明 登录系统', type: 'info' },
+            { time: '2026-07-02 08:30', action: '系统启动完成', type: 'info' },
             { time: '2026-07-02 08:35', action: '患者 孙雅文 挂号成功（牙齿美白）', type: 'info' },
             { time: '2026-07-02 09:00', action: '孙雅文 冷光美白治疗完成', type: 'success' },
             { time: '2026-07-02 09:15', action: '收费：¥2,800（孙雅文-牙齿美白）已收款', type: 'success' },

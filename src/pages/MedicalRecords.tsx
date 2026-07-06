@@ -27,7 +27,7 @@ export default function MedicalRecords() {
   const { records, addRecord, updateRecord } = useMedicalRecords()
   const { patients } = usePatients()
   const doctorList = useMemo(() => getRegisteredDoctors(), [])
-  const defaultDoctor = doctorList[0]?.name || '陈志明'
+  const defaultDoctor = doctorList[0]?.name || ''
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null)
