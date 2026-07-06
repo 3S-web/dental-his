@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePatients } from '../data/useStore'
 import { extractPatientName, searchPatient, createPatient } from '../agents/PatientAgent'
-import { createSpeechRecognition, mockStreamTranscribe } from '../agents/SpeechAgent'
+import { createSpeechRecognition, hasRealSpeech } from '../agents/SpeechAgent'
 import { extractMedicalRecord } from '../agents/MedicalAgent'
 import { correctMedicalTerms, mockCorrectWithExplanations } from '../agents/CorrectionAgent'
 import { fillEMR, validateEMR } from '../agents/EMRAgent'
@@ -103,10 +103,9 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
     setRecordingTime(0)
     setLiveText('')
 
-    timerRef.current = setInterval(() => setRecordingTime((prev) => prev + 1), 1000)
-
     const recognition = createSpeechRecognition()
     if (recognition) {
+      timerRef.current = setInterval(() => setRecordingTime((prev) => prev + 1), 1000)
       recognitionRef.current = recognition
       let finalText = ''
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -116,17 +115,11 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
           if (event.results[i].isFinal) { finalText += event.results[i][0].transcript }
           else { interim += event.results[i][0].transcript }
         }
-        const displayText = finalText + interim
-        setLiveText(displayText)
+        setLiveText(finalText + interim)
         if (liveTextRef.current) liveTextRef.current.scrollTop = liveTextRef.current.scrollHeight
       }
       recognition.onerror = () => {}
       recognition.start()
-    } else {
-      ;(async () => {
-        let currentText = ''
-        for await (const chunk of mockStreamTranscribe()) { currentText = chunk; setLiveText(currentText) }
-      })()
     }
   }
 
@@ -408,6 +401,7 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
           {(workflow === 'recording' || isRecording) && (
             <div className="space-y-4">
               <div className="bg-white border-2 border-red-200 rounded-2xl p-6 space-y-4">
+                {hasRealSpeech && <div className="text-center"><span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">🎙️ 真实语音识别已启动</span></div>}
                 <div className="flex items-center justify-center gap-4">
                   <span className="relative flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
@@ -420,18 +414,18 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
                     停止录音
                   </button>
                 </div>
-                <div ref={liveTextRef} className="bg-gray-50 border border-gray-200 rounded-xl p-4 h-48 overflow-y-auto">
-                  {liveText ? (
-                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{liveText}</p>
-                  ) : (
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      <span className="ml-2">正在聆听...</span>
-                    </div>
-                  )}
-                </div>
+                {hasRealSpeech ? (
+                  <div ref={liveTextRef} className="bg-gray-50 border border-gray-200 rounded-xl p-4 h-48 overflow-y-auto">
+                    {liveText ? <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{liveText}</p> : <div className="flex items-center gap-2 text-sm text-gray-400"><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" /><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} /><span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} /><span className="ml-2">正在聆听，请说话...</span></div>}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-xs text-amber-600 mb-2">⚠️ 浏览器不支持语音识别，请在下方手动输入病历内容</p>
+                    <textarea rows={6} value={liveText} onChange={(e) => setLiveText(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 resize-none"
+                      placeholder="请在此输入患者的病历内容..." />
+                  </div>
+                )}
               </div>
             </div>
           )}
