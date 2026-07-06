@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useMedicalRecords, usePatients } from '../data/useStore'
 import AutocompleteInput from '../components/AutocompleteInput'
-import AIDictationDrawer from '../components/AIDictationDrawer'
 import AIConsultationDrawer from '../components/AIConsultationDrawer'
 import type { MedicalRecord, RecordType } from '../data/mock'
 import type { Role } from '../data/mock'
@@ -33,7 +32,6 @@ export default function MedicalRecords() {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null)
   const [editingRecord, setEditingRecord] = useState<MedicalRecord | null>(null)
   const [showNewForm, setShowNewForm] = useState(false)
-  const [showAIDrawer, setShowAIDrawer] = useState(false)
   const [showAIConsult, setShowAIConsult] = useState(false)
   const [form, setForm] = useState(emptyForm)
 
@@ -44,19 +42,6 @@ export default function MedicalRecords() {
   })
 
   const resetForm = () => setForm(emptyForm)
-
-  // Save AI-generated record
-  const handleAISave = (gen: { chiefComplaint: string; presentIllness: string; pastHistory: string; oralExam: string; auxExam: string; diagnosis: string; treatmentPlan: string; treatment: string; orders: string; notes: string }) => {
-    addRecord({
-      patientName: 'AI口述患者',
-      patientId: '',
-      type: '复诊',
-      doctorName: defaultDoctor,
-      date: new Date().toISOString().split('T')[0],
-      ...gen,
-      teeth: [],
-    })
-  }
 
   // Save AI consultation record
   const handleAIConsultSave = (record: Omit<MedicalRecord, 'id'>) => {
@@ -94,9 +79,6 @@ export default function MedicalRecords() {
         <div className="flex items-center gap-2">
           <button onClick={() => setShowAIConsult(true)} type="button" className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-blue-200/30 hover:shadow-lg hover:from-blue-600 hover:to-indigo-600 active:scale-95 transition-all">
             <span className="text-base">🤖</span> AI智能接诊助手
-          </button>
-          <button onClick={() => setShowAIDrawer(true)} type="button" className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-green-200/30 hover:shadow-lg hover:from-green-600 hover:to-emerald-600 active:scale-95 transition-all">
-            <span className="text-base">🎤</span> AI口述病例
           </button>
           <button onClick={() => { resetForm(); setShowNewForm(true) }} type="button" className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-teal-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-teal-200/30 hover:shadow-lg active:scale-95 transition-all">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>新建病历
@@ -325,13 +307,6 @@ export default function MedicalRecords() {
           </div>
         </div>
       )}
-      {/* AI Dictation Drawer */}
-      <AIDictationDrawer
-        isOpen={showAIDrawer}
-        onClose={() => setShowAIDrawer(false)}
-        onSave={handleAISave}
-      />
-
       {/* AI Consultation Drawer */}
       <AIConsultationDrawer
         isOpen={showAIConsult}
