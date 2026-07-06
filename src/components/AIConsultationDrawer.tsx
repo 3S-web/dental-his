@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { usePatients } from '../data/useStore'
 import { extractPatientName, searchPatient, createPatient } from '../agents/PatientAgent'
+import { createSpeechRecognition } from '../agents/SpeechAgent'
 import { extractMedicalRecord } from '../agents/MedicalAgent'
 import { correctMedicalTerms, mockCorrectWithExplanations } from '../agents/CorrectionAgent'
 import { fillEMR, validateEMR } from '../agents/EMRAgent'
@@ -19,6 +20,10 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
   const [foundPatient, setFoundPatient] = useState<ReturnType<typeof searchPatient>>(null)
   const [newPatientForm, setNewPatientForm] = useState({ name: '', gender: '男', age: '', phone: '' })
   const [liveText, setLiveText] = useState('')
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const recognitionRef = useRef<ReturnType<typeof createSpeechRecognition>>(null)
   const [agentSteps, setAgentSteps] = useState<AgentStep[]>([])
   const [corrections, setCorrections] = useState<{ original: string; corrected: string; explanation: string }[]>([])
   const [extractedRecord, setExtractedRecord] = useState<ExtractedInfo>(EMPTY_EXTRACTED)
@@ -54,7 +59,37 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
     setFoundPatient(np); setWorkflow('text_input')
   }
 
-  // ③ AI Processing
+  // ③ Recording
+  const startRecording = () => {
+    setIsRecording(true); setRecordingTime(0)
+    timerRef.current = setInterval(() => setRecordingTime((prev) => prev + 1), 1000)
+    const recognition = createSpeechRecognition()
+    if (recognition) {
+      recognitionRef.current = recognition
+      let finalText = liveText || ''
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (event: any) => {
+        let interim = ''
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) { finalText += event.results[i][0].transcript }
+          else { interim += event.results[i][0].transcript }
+        }
+        setLiveText((finalText + interim).trim())
+      }
+      recognition.onerror = () => {}
+      recognition.start()
+    }
+  }
+
+  const stopRecording = () => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (recognitionRef.current) { recognitionRef.current.stop(); recognitionRef.current = null }
+    setIsRecording(false)
+  }
+
+  const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`
+
+  // ④ AI Processing
   const startProcessing = async () => {
     setWorkflow('processing')
     const steps: AgentStep[] = [
@@ -182,11 +217,36 @@ export default function AIConsultationDrawer({ isOpen, onClose, onSaveRecord }: 
                 </div>
               )}
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs text-gray-500">
-                <p className="font-semibold text-gray-600 mb-2">💡 输入病历内容，AI 自动整理为结构化病历</p>
+                <p className="font-semibold text-gray-600 mb-2">💡 可以录音口述，也可以直接打字，AI 自动整理为结构化病历</p>
                 <p>示例："种植三个月复诊，不疼不肿，CBCT骨结合不错，继续观察，不开药"</p>
               </div>
+
+              {/* Recording controls */}
+              <div className="flex items-center justify-center gap-3">
+                {!isRecording ? (
+                  <button type="button" onClick={startRecording}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white font-semibold rounded-full shadow-lg shadow-red-200/30 hover:shadow-xl active:scale-95 transition-all">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                    🎤 开始录音
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"/><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"/></span>
+                    <span className="text-lg font-bold text-red-500 font-mono">{formatTime(recordingTime)}</span>
+                    <button type="button" onClick={stopRecording}
+                      className="flex items-center gap-2 px-6 py-3 bg-red-100 text-red-600 font-semibold rounded-full hover:bg-red-200 active:scale-95 transition-all">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                      停止录音
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Text display / input area */}
               <textarea rows={8} value={liveText} onChange={(e) => setLiveText(e.target.value)}
-                placeholder="请在此输入患者的病历内容，可以自然描述，AI会自动整理..." className={textareaClass + ' text-base'} autoFocus />
+                placeholder={isRecording ? "正在聆听，医生说的话将实时显示在这里..." : "请在此输入病历内容，或点击上方按钮录音口述..."}
+                className={textareaClass + ' text-base'} autoFocus />
+
               <div className="flex gap-3">
                 <button type="button" onClick={() => setWorkflow('idle')} className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200">返回</button>
                 <button type="button" onClick={startProcessing} disabled={!liveText.trim()}
